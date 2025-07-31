@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chama Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">Chama Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('add_member') }}"><i class="fas fa-user-plus"></i> Add Member</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('add_contribution') }}"><i class="fas fa-hand-holding-usd"></i> Contribution</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('add_loan') }}"><i class="fas fa-coins"></i> Add Loan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('repay_loan') }}"><i class="fas fa-money-bill-wave"></i> Repay Loan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('withdraw_loan') }}"><i class="fas fa-arrow-down"></i> Withdraw Loan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_member') }}"><i class="fas fa-users-cog"></i> Manage Members</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ messages[0] }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Page Content -->
+    <div class="container mb-5">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center mt-5 text-muted small">
+        <p>© {{ current_year or "2025" }} Chama Admin System. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

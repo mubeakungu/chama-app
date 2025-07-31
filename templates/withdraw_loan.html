@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-info text-white fw-bold">Withdraw Loan</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Select Loan</label>
+                <select name="loan_id" class="form-select" required>
+                    {% for loan in loans %}
+                        <option value="{{ loan[0] }}">{{ loan[1] }} — KES {{ "%.2f"|format(loan[2]) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Amount Disbursed (KES)</label>
+                <input type="number" step="0.01" name="amount" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Disbursed Date</label>
+                <input type="date" name="disbursed_date" class="form-control" required>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-info"><i class="fas fa-arrow-down"></i> Record Withdrawal</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

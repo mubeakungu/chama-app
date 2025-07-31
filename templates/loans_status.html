@@ -1,0 +1,23 @@
+<h2>Loan Defaulters</h2>
+<table border="1">
+  <tr><th>Member</th><th>Loan Amount</th><th>Repaid</th></tr>
+  {% for d in defaulters %}
+  <tr>
+    <td>{{ d[0] }}</td>
+    <td>KES {{ d[1] }}</td>
+    <td>KES {{ d[2] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>Completed Loans</h2>
+<table border="1">
+  <tr><th>Member</th><th>Loan Amount</th><th>Repaid</th></tr>
+  {% for c in completed %}
+  <tr>
+    <td>{{ c[0] }}</td>
+    <td>KES {{ c[1] }}</td>
+    <td>KES {{ c[2] }}</td>
+  </tr>
+  {% endfor %}
+</table>

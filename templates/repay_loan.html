@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-secondary text-white fw-bold">Repay Loan</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Select Loan</label>
+                <select name="loan_id" class="form-select" required>
+                    {% for loan in loans %}
+                        <option value="{{ loan[0] }}">{{ loan[1] }} - KES {{ loan[2] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Amount Paid (KES)</label>
+                <input type="number" name="amount_paid" step="0.01" class="form-control" required>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-secondary"><i class="fas fa-money-bill-wave"></i> Record Repayment</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
