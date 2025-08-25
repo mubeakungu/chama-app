@@ -1,77 +1,41 @@
-<!-- Contribution Summary -->
-<h5 class="mb-3">Contribution Summary</h5>
-<div class="table-responsive mb-5">
-    <table class="table table-striped table-bordered text-center">
-        <thead class="table-dark">
-            <tr>
-                <th>Member</th>
-                <th>Type</th>
-                <th>Date</th>
-                <th>Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for c in contributions %}
-            <tr>
-                <td>{{ c[0] }}</td>
-                <td>{{ c[1] }}</td>
-                <td>{{ c[2] }}</td>
-                <td>KES {{ c[3] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot class="table-secondary fw-bold">
-            <tr>
-                <td colspan="3">Total Contributions</td>
-                <td>KES {{ total_contributions }}</td>
-            </tr>
-        </tfoot>
-    </table>
-</div>
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Chama Dashboard</h2>
 
-<!-- Loan Summary -->
-<h5 class="mb-3">Loan Summary</h5>
-<div class="table-responsive">
-    <table class="table table-striped table-bordered text-center">
-        <thead class="table-dark">
-            <tr>
-                <th>Member</th>
-                <th>Principal</th>
-                <th>Total Due</th>
-                <th>Repaid</th>
-                <th>Balance</th>
-                <th>Date of Application</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for loan in loans %}
-            <tr>
-                <td>{{ loan[0] }}</td>
-                <td>KES {{ loan[1] }}</td>
-                <td>KES {{ loan[2] }}</td>
-                <td>KES {{ loan[3] }}</td>
-                <td>KES {{ loan[4] }}</td>
-                <td>{{ loan[5] }}</td>
-                <td>
-                    {% if loan[4] <= 0 %}
-                        <span class="badge bg-success">Completed</span>
-                    {% else %}
-                        <span class="badge bg-danger">Ongoing</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot class="table-secondary fw-bold">
-            <tr>
-                <td>Totals</td>
-                <td>KES {{ total_principal }}</td>
-                <td>KES {{ total_due }}</td>
-                <td>KES {{ total_repaid }}</td>
-                <td>KES {{ total_balance }}</td>
-                <td colspan="2"></td>
-            </tr>
-        </tfoot>
-    </table>
+    <div class="row text-center">
+        <div class="col-md-3">
+            <div class="card shadow p-3 mb-3 bg-light">
+                <h5>Total Members</h5>
+                <h3>{{ total_members }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow p-3 mb-3 bg-light">
+                <h5>Total Contributions</h5>
+                <h3>KES {{ total_contributions }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow p-3 mb-3 bg-light">
+                <h5>Active Loans</h5>
+                <h3>KES {{ active_loans }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow p-3 mb-3 bg-light">
+                <h5>Total Repayments</h5>
+                <h3>KES {{ total_repayments }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('add_member') }}" class="btn btn-primary">Add Member</a>
+        <a href="{{ url_for('add_contribution') }}" class="btn btn-success">Add Contribution</a>
+        <a href="{{ url_for('add_loan') }}" class="btn btn-warning">Add Loan</a>
+        <a href="{{ url_for('repay_loan') }}" class="btn btn-info">Repay Loan</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    </div>
 </div>
+{% endblock %}
