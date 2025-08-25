@@ -12,14 +12,25 @@
                     {% endfor %}
                 </select>
             </div>
+
             <div class="mb-3">
                 <label class="form-label">Amount Paid (KES)</label>
                 <input type="number" name="amount_paid" step="0.01" class="form-control" required>
             </div>
+
+            <!-- Repayment Date -->
+            <div class="mb-3">
+                <label class="form-label">Repayment Date</label>
+                <input type="date" name="repayment_date" class="form-control" required>
+            </div>
+
             <div class="d-grid">
-                <button type="submit" class="btn btn-secondary"><i class="fas fa-money-bill-wave"></i> Record Repayment</button>
+                <button type="submit" class="btn btn-secondary">
+                    <i class="fas fa-money-bill-wave"></i> Record Repayment
+                </button>
             </div>
         </form>
     </div>
 </div>
 {% endblock %}
+
