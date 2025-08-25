@@ -92,47 +92,42 @@ def login():
     return render_template("login.html")
 
 
-@app.route('/dashboard')
+@app.route("/dashboard")
 def dashboard():
-    if not session.get('admin'):
-        return redirect(url_for('login'))
+    conn = sqlite3.connect("chama.db")
+    cur = conn.cursor()
 
-    conn = sqlite3.connect('chama.db')
-    c = conn.cursor()
+    # Contributions summary (Member, Type, Date, Amount)
+    cur.execute("""
+        SELECT members.name, contributions.type, contributions.date, contributions.amount
+        FROM contributions
+        JOIN members ON contributions.member_id = members.id
+    """)
+    contributions = cur.fetchall()
 
-    c.execute('''SELECT m.id, m.name, IFNULL(SUM(c.amount), 0)
-                 FROM members m LEFT JOIN contributions c ON m.id = c.member_id GROUP BY m.id''')
-    members_summary = c.fetchall()
+    # Loan summary (Member, Principal, Total Due, Repaid, Balance, Date)
+    cur.execute("""
+        SELECT members.name, loans.principal, loans.total_due, loans.repaid, 
+               (loans.total_due - loans.repaid) AS balance, loans.date
+        FROM loans
+        JOIN members ON loans.member_id = members.id
+    """)
+    loans = cur.fetchall()
 
-    c.execute('''SELECT m.id, m.name, c.amount, c.type, c.date
-                 FROM contributions c JOIN members m ON c.member_id = m.id ORDER BY c.date DESC''')
-    all_contributions = c.fetchall()
+    # Chart data - group contributions by type
+    cur.execute("SELECT type, SUM(amount) FROM contributions GROUP BY type")
+    rows = cur.fetchall()
+    chart_labels = [r[0] for r in rows]
+    chart_data = [r[1] for r in rows]
 
-    c.execute('''SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period,
-                        IFNULL(SUM(r.amount_paid), 0)
-                 FROM loans l
-                 JOIN members m ON m.id = l.member_id
-                 LEFT JOIN loan_repayments r ON l.id = r.loan_id
-                 GROUP BY l.id''')
-    loans = c.fetchall()
     conn.close()
-
-    loan_data = []
-    for name, loan_id, principal, rate, period, repaid in loans:
-        total_due = principal + (principal * rate * period)
-        balance = total_due - repaid
-        loan_data.append((name, principal, total_due, repaid, balance))
-
-    chart_labels = [row[1] for row in members_summary]
-    chart_data = [row[2] for row in members_summary]
-
-    return render_template("dashboard.html",
-                           members_summary=members_summary,
-                           all_contributions=all_contributions,
-                           loans=loan_data,
-                           chart_labels=chart_labels,
-                           chart_data=chart_data)
-
+    return render_template(
+        "dashboard.html",
+        contributions=contributions,
+        loans=loans,
+        chart_labels=chart_labels,
+        chart_data=chart_data
+    )
 
 
 
