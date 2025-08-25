@@ -1,13 +1,33 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="text-center mb-4">
-    <h2 class="fw-bold text-primary">📊 Chama Dashboard</h2>
-    <p class="text-muted">Overview of contributions and loans</p>
+<!-- Contribution Summary -->
+<h5 class="mb-3">Contribution Summary</h5>
+<div class="table-responsive mb-5">
+    <table class="table table-striped table-bordered text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>Member</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in contributions %}
+            <tr>
+                <td>{{ c[0] }}</td>
+                <td>{{ c[1] }}</td>
+                <td>{{ c[2] }}</td>
+                <td>KES {{ c[3] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot class="table-secondary fw-bold">
+            <tr>
+                <td colspan="3">Total Contributions</td>
+                <td>KES {{ total_contributions }}</td>
+            </tr>
+        </tfoot>
+    </table>
 </div>
-
-<!-- Contributions Chart -->
-<h5 class="mb-3">Member Contributions</h5>
-<canvas id="contributionChart" class="mb-5"></canvas>
 
 <!-- Loan Summary -->
 <h5 class="mb-3">Loan Summary</h5>
@@ -20,6 +40,7 @@
                 <th>Total Due</th>
                 <th>Repaid</th>
                 <th>Balance</th>
+                <th>Date of Application</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -31,6 +52,7 @@
                 <td>KES {{ loan[2] }}</td>
                 <td>KES {{ loan[3] }}</td>
                 <td>KES {{ loan[4] }}</td>
+                <td>{{ loan[5] }}</td>
                 <td>
                     {% if loan[4] <= 0 %}
                         <span class="badge bg-success">Completed</span>
@@ -41,21 +63,15 @@
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot class="table-secondary fw-bold">
+            <tr>
+                <td>Totals</td>
+                <td>KES {{ total_principal }}</td>
+                <td>KES {{ total_due }}</td>
+                <td>KES {{ total_repaid }}</td>
+                <td>KES {{ total_balance }}</td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
     </table>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const ctx = document.getElementById('contributionChart').getContext('2d');
-    const chart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: {{ chart_labels | tojson }},
-            datasets: [{
-                data: {{ chart_data | tojson }},
-                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#20c997']
-            }]
-        }
-    });
-</script>
-{% endblock %}
