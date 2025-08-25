@@ -97,7 +97,7 @@ def dashboard():
     conn = sqlite3.connect("chama.db")
     c = conn.cursor()
 
-    # --- Fetch Contributions ---
+    # --- Contributions ---
     c.execute("""
         SELECT m.name, con.type, con.date, con.amount
         FROM contributions con
@@ -105,22 +105,19 @@ def dashboard():
     """)
     contributions = c.fetchall()
 
-    # Total contributions
     c.execute("SELECT SUM(amount) FROM contributions")
     total_contributions = c.fetchone()[0] or 0
 
-    # --- Group contributions by type for chart ---
     c.execute("""
         SELECT con.type, SUM(con.amount)
         FROM contributions con
         GROUP BY con.type
     """)
     chart_data_raw = c.fetchall()
-
     chart_labels = [row[0] for row in chart_data_raw]
     chart_data = [row[1] for row in chart_data_raw]
 
-    # --- Fetch Loan Summary ---
+    # --- Loans ---
     c.execute("""
         SELECT m.name, l.principal, l.total_due, l.repaid, 
                (l.total_due - l.repaid) AS balance, l.date_applied
@@ -129,13 +126,15 @@ def dashboard():
     """)
     loans = c.fetchall()
 
-    # Loan totals
-    c.execute("SELECT SUM(principal), SUM(total_due), SUM(repaid), SUM(total_due - repaid) FROM loans")
-    loan_totals = c.fetchone()
-    total_principal = loan_totals[0] or 0
-    total_due = loan_totals[1] or 0
-    total_repaid = loan_totals[2] or 0
-    total_balance = loan_totals[3] or 0
+    c.execute("""
+        SELECT SUM(principal), SUM(total_due), SUM(repaid), 
+               (SUM(total_due) - SUM(repaid))
+        FROM loans
+    """)
+    loan_totals = c.fetchone() or (0, 0, 0, 0)
+    total_principal, total_due, total_repaid, total_balance = [
+        x if x is not None else 0 for x in loan_totals
+    ]
 
     conn.close()
 
@@ -151,10 +150,6 @@ def dashboard():
         total_repaid=total_repaid,
         total_balance=total_balance
     )
-
-
-
-
 
 from flask import jsonify
 
