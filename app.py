@@ -100,15 +100,21 @@ def dashboard():
     conn = sqlite3.connect('chama.db')
     c = conn.cursor()
 
+    # Contributions per member (for pie chart)
     c.execute('''SELECT m.id, m.name, IFNULL(SUM(c.amount), 0)
-                 FROM members m LEFT JOIN contributions c ON m.id = c.member_id GROUP BY m.id''')
+                 FROM members m LEFT JOIN contributions c ON m.id = c.member_id 
+                 GROUP BY m.id''')
     members_summary = c.fetchall()
 
+    # All contributions list
     c.execute('''SELECT m.id, m.name, c.amount, c.type, c.date
-                 FROM contributions c JOIN members m ON c.member_id = m.id ORDER BY c.date DESC''')
+                 FROM contributions c 
+                 JOIN members m ON c.member_id = m.id 
+                 ORDER BY c.date DESC''')
     all_contributions = c.fetchall()
 
-    c.execute('''SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period,
+    # Loans with repayments
+    c.execute('''SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period, l.issue_date,
                         IFNULL(SUM(r.amount_paid), 0)
                  FROM loans l
                  JOIN members m ON m.id = l.member_id
@@ -118,11 +124,23 @@ def dashboard():
     conn.close()
 
     loan_data = []
-    for name, loan_id, principal, rate, period, repaid in loans:
+    total_loans = 0
+    total_repaid = 0
+    total_balance = 0
+
+    for name, loan_id, principal, rate, period, issue_date, repaid in loans:
         total_due = principal + (principal * rate * period)
         balance = total_due - repaid
-        loan_data.append((name, principal, total_due, repaid, balance))
+        loan_data.append((name, principal, total_due, repaid, balance, issue_date))
 
+        total_loans += principal
+        total_repaid += repaid
+        total_balance += balance
+
+    # Totals
+    total_contributions = sum([row[2] for row in members_summary])
+
+    # Chart data
     chart_labels = [row[1] for row in members_summary]
     chart_data = [row[2] for row in members_summary]
 
@@ -131,7 +149,12 @@ def dashboard():
                            all_contributions=all_contributions,
                            loans=loan_data,
                            chart_labels=chart_labels,
-                           chart_data=chart_data)
+                           chart_data=chart_data,
+                           total_contributions=total_contributions,
+                           total_loans=total_loans,
+                           total_repaid=total_repaid,
+                           total_balance=total_balance)
+
 
 
 
