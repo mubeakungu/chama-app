@@ -514,7 +514,6 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
-if __name__ == '__main__':
-    init_db()
-    app.run(host='192.168.2.117', port=5000, debug=True)
