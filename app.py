@@ -1,197 +1,172 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, make_response, render_template_string, jsonify
 import sqlite3
-from datetime import datetime
-import pandas as pd
-from xhtml2pdf import pisa
-import os
+from flask import Flask, render_template, request, redirect, url_for, flash
 
 app = Flask(__name__)
-app.secret_key = 'supersecret'
+app.secret_key = "chama_secret_key"
+
+DB_NAME = "chama.db"
 
 
-def init_db():
-    conn = sqlite3.connect('chama.db')
-    c = conn.cursor()
-
-    # Admin
-    c.execute('''CREATE TABLE IF NOT EXISTS admin (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
-        password TEXT NOT NULL
-    )''')
-
-    # Members
-    c.execute('''CREATE TABLE IF NOT EXISTS members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-    )''')
-
-    # Contributions
-    c.execute('''CREATE TABLE IF NOT EXISTS contributions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        member_id INTEGER,
-        amount REAL,
-        type TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(member_id) REFERENCES members(id)
-    )''')
-
-    # Loans
-    c.execute('''CREATE TABLE IF NOT EXISTS loans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        member_id INTEGER,
-        loan_type TEXT,
-        principal REAL,
-        interest_rate REAL,
-        repayment_period INTEGER,
-        issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(member_id) REFERENCES members(id)
-    )''')
-
-    # Withdrawals
-    c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        amount REAL,
-        disbursed_date TEXT,
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-    )''')
-
-    # Loan Repayments
-    c.execute('''CREATE TABLE IF NOT EXISTS loan_repayments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        amount_paid REAL,
-        payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-    )''')
-
-    # Default admin
-    c.execute("SELECT * FROM admin WHERE username = 'admin'")
-    if not c.fetchone():
-        c.execute("INSERT INTO admin (username, password) VALUES (?, ?)", ('admin', 'pass123'))
-
-    conn.commit()
-    conn.close()
+def get_db_connection():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        conn = sqlite3.connect('chama.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM admin WHERE username=? AND password=?", (username, password))
-        admin = c.fetchone()
-        conn.close()
-        if admin:
-            session['admin'] = True
-            return redirect(url_for('dashboard'))
-        else:
-            return "Invalid credentials"
-    return render_template("login.html")
+@app.route("/")
+def index():
+    return redirect(url_for("dashboard"))
 
 
-@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route("/dashboard", methods=["GET", "POST"])
 def dashboard():
-    if not session.get('admin'):
-        return redirect(url_for('login'))
-
-    selected_member = request.form.get("member_filter")
-
-    conn = sqlite3.connect('chama.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
-    # Members for dropdown
-    c.execute("SELECT id, name FROM members")
+    # Totals
+    c.execute("SELECT SUM(amount) AS total_contributions FROM contributions")
+    total_contributions = c.fetchone()["total_contributions"] or 0
+
+    c.execute("SELECT SUM(amount) AS total_loans, SUM(interest) AS total_interest FROM loans")
+    loan_data = c.fetchone()
+    total_loans = loan_data["total_loans"] or 0
+    total_interest = loan_data["total_interest"] or 0
+
+    # Loan summary
+    c.execute("""
+        SELECT l.id, m.name AS member_name, l.amount, l.interest, l.status, l.date
+        FROM loans l
+        JOIN members m ON l.member_id = m.id
+    """)
+    loan_summary = c.fetchall()
+
+    # Dropdown members
+    c.execute("SELECT * FROM members")
     members = c.fetchall()
 
-    # Contributions
-    if selected_member:
-        c.execute('''SELECT m.name, c.amount, c.type, c.date
-                     FROM contributions c 
-                     JOIN members m ON c.member_id = m.id
-                     WHERE m.id = ?
-                     ORDER BY c.date DESC''', (selected_member,))
-    else:
-        c.execute('''SELECT m.name, c.amount, c.type, c.date
-                     FROM contributions c 
-                     JOIN members m ON c.member_id = m.id
-                     ORDER BY c.date DESC''')
-    all_contributions = c.fetchall()
+    selected_member_data = None
+    if request.method == "POST":
+        member_id = request.form.get("member_id")
+        if member_id:
+            # Contributions
+            c.execute("SELECT SUM(amount) AS total FROM contributions WHERE member_id = ?", (member_id,))
+            total_contrib = c.fetchone()["total"] or 0
 
-    # Loans with repayments
-    if selected_member:
-        c.execute('''SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period, l.issue_date,
-                            IFNULL(SUM(r.amount_paid), 0)
-                     FROM loans l
-                     JOIN members m ON m.id = l.member_id
-                     LEFT JOIN loan_repayments r ON l.id = r.loan_id
-                     WHERE m.id = ?
-                     GROUP BY l.id''', (selected_member,))
-    else:
-        c.execute('''SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period, l.issue_date,
-                            IFNULL(SUM(r.amount_paid), 0)
-                     FROM loans l
-                     JOIN members m ON m.id = l.member_id
-                     LEFT JOIN loan_repayments r ON l.id = r.loan_id
-                     GROUP BY l.id''')
-    loans = c.fetchall()
+            # Loans
+            c.execute("SELECT SUM(amount) AS total FROM loans WHERE member_id = ?", (member_id,))
+            total_loan = c.fetchone()["total"] or 0
+
+            # Loan Status
+            c.execute("SELECT status FROM loans WHERE member_id = ?", (member_id,))
+            statuses = [row["status"] for row in c.fetchall()]
+
+            selected_member_data = {
+                "contributions": total_contrib,
+                "loans": total_loan,
+                "statuses": statuses,
+            }
+
     conn.close()
 
-    # Process loans
-    loan_data = []
-    for name, loan_id, principal, rate, period, issue_date, repaid in loans:
-        total_interest = principal * rate * period
-        total_due = principal + total_interest
-        balance = total_due - repaid
-        loan_data.append((name, principal, total_due, repaid, balance, total_interest, issue_date, loan_id))
+    return render_template(
+        "dashboard.html",
+        total_contributions=total_contributions,
+        total_loans=total_loans,
+        total_interest=total_interest,
+        loan_summary=loan_summary,
+        members=members,
+        selected_member_data=selected_member_data,
+    )
 
-    # Pie Chart Data
-    conn = sqlite3.connect('chama.db')
+
+@app.route("/add_member", methods=["GET", "POST"])
+def add_member():
+    if request.method == "POST":
+        name = request.form["name"]
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO members (name) VALUES (?)", (name,))
+        conn.commit()
+        conn.close()
+        flash("Member added successfully!", "success")
+        return redirect(url_for("dashboard"))
+    return render_template("add_member.html")
+
+
+@app.route("/add_contribution", methods=["GET", "POST"])
+def add_contribution():
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('''SELECT m.name, IFNULL(SUM(c.amount), 0)
-                 FROM members m 
-                 LEFT JOIN contributions c ON m.id = c.member_id
-                 GROUP BY m.id''')
-    members_summary = c.fetchall()
+    c.execute("SELECT * FROM members")
+    members = c.fetchall()
+
+    if request.method == "POST":
+        member_id = request.form["member_id"]
+        amount = request.form["amount"]
+        c.execute("INSERT INTO contributions (member_id, amount) VALUES (?, ?)", (member_id, amount))
+        conn.commit()
+        conn.close()
+        flash("Contribution added successfully!", "success")
+        return redirect(url_for("dashboard"))
+
     conn.close()
-
-    chart_labels = [row[0] for row in members_summary]
-    chart_data = [row[1] for row in members_summary]
-
-    return render_template("dashboard.html",
-                           all_contributions=all_contributions,
-                           loans=loan_data,
-                           members=members,
-                           chart_labels=chart_labels,
-                           chart_data=chart_data,
-                           selected_member=selected_member)
+    return render_template("add_contribution.html", members=members)
 
 
-@app.route("/delete_loan/<int:loan_id>")
+@app.route("/add_loan", methods=["GET", "POST"])
+def add_loan():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM members")
+    members = c.fetchall()
+
+    if request.method == "POST":
+        member_id = request.form["member_id"]
+        amount = float(request.form["amount"])
+        interest = float(request.form["interest"])
+        status = request.form["status"]
+
+        c.execute(
+            "INSERT INTO loans (member_id, amount, interest, status) VALUES (?, ?, ?, ?)",
+            (member_id, amount, interest, status),
+        )
+        conn.commit()
+        conn.close()
+        flash("Loan added successfully!", "success")
+        return redirect(url_for("dashboard"))
+
+    conn.close()
+    return render_template("add_loan.html", members=members)
+
+
+@app.route("/delete_loan/<int:loan_id>", methods=["POST"])
 def delete_loan(loan_id):
-    if not session.get('admin'):
-        return redirect(url_for('login'))
-
-    conn = sqlite3.connect('chama.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute("DELETE FROM loan_repayments WHERE loan_id=?", (loan_id,))
-    c.execute("DELETE FROM withdrawals WHERE loan_id=?", (loan_id,))
-    c.execute("DELETE FROM loans WHERE id=?", (loan_id,))
+    c.execute("DELETE FROM loans WHERE id = ?", (loan_id,))
     conn.commit()
     conn.close()
-    flash("Loan deleted successfully.")
-    return redirect(url_for('dashboard'))
+    flash("Loan deleted successfully!", "danger")
+    return redirect(url_for("dashboard"))
 
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
+@app.route("/member_report/<int:member_id>")
+def member_report(member_id):
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM members WHERE id = ?", (member_id,))
+    member = c.fetchone()
+
+    c.execute("SELECT * FROM contributions WHERE member_id = ?", (member_id,))
+    contributions = c.fetchall()
+
+    c.execute("SELECT * FROM loans WHERE member_id = ?", (member_id,))
+    loans = c.fetchall()
+
+    conn.close()
+    return render_template("member_report.html", member=member, contributions=contributions, loans=loans)
 
 
 if __name__ == "__main__":
-    init_db()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)
+    app.run(host="0.0.0.0", port=10000, debug=True)
