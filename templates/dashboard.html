@@ -5,7 +5,43 @@
     <p class="text-muted">Overview of contributions and loans</p>
 </div>
 
-<!-- Contributions Summary -->
+<!-- Summary Cards -->
+<div class="row mb-4 text-center">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                <h6 class="text-muted">Total Contributions</h6>
+                <h4 class="fw-bold text-primary">KES {{ total_contributions }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                <h6 class="text-muted">Total Loans Issued</h6>
+                <h4 class="fw-bold text-danger">KES {{ total_loans }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                <h6 class="text-muted">Total Repaid</h6>
+                <h4 class="fw-bold text-success">KES {{ total_repaid }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                <h6 class="text-muted">Outstanding Balance</h6>
+                <h4 class="fw-bold text-warning">KES {{ total_balance }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contributions Summary Table -->
 <h5 class="mb-3">Contribution Summary</h5>
 <div class="table-responsive mb-4">
     <table class="table table-striped table-bordered text-center">
@@ -18,12 +54,12 @@
             </tr>
         </thead>
         <tbody>
-            {% for contribution in contributions %}
+            {% for c in all_contributions %}
             <tr>
-                <td>{{ contribution[0] }}</td>
-                <td>{{ contribution[1] }}</td>
-                <td>{{ contribution[2] }}</td>
-                <td>KES {{ contribution[3] }}</td>
+                <td>{{ c[1] }}</td>
+                <td>{{ c[3] }}</td>
+                <td>{{ c[4] }}</td>
+                <td>KES {{ c[2] }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -45,7 +81,7 @@
                 <th>Total Due</th>
                 <th>Repaid</th>
                 <th>Balance</th>
-                <th>Date of Application</th>
+                <th>Issue Date</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -77,9 +113,9 @@
     const chart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: {{ chart_labels | tojson }},   // e.g. ["Welfare", "Shares", "Registration"]
+            labels: {{ chart_labels | tojson }},
             datasets: [{
-                data: {{ chart_data | tojson }},  // e.g. [5000, 12000, 3000]
+                data: {{ chart_data | tojson }},
                 backgroundColor: [
                     '#007bff', '#28a745', '#ffc107', 
                     '#dc3545', '#6f42c1', '#20c997'
