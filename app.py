@@ -1,5 +1,37 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, flash
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect("chama.db")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS contributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        member_id INTEGER,
+        amount REAL,
+        date TEXT,
+        FOREIGN KEY (member_id) REFERENCES members (id)
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS loans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        member_id INTEGER,
+        amount REAL,
+        date TEXT,
+        status TEXT,
+        FOREIGN KEY (member_id) REFERENCES members (id)
+    )''')
+    conn.commit()
+    conn.close()
+
+# run auto-init when app starts
+init_db()
+
 
 app = Flask(__name__)
 app.secret_key = "chama_secret_key"
