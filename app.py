@@ -3,6 +3,7 @@ import sqlite3
 from datetime import datetime
 import pandas as pd
 from xhtml2pdf import pisa
+import os
 
 app = Flask(__name__)
 app.secret_key = 'supersecret'
@@ -74,6 +75,24 @@ def init_db():
     conn.close()
 
 
+def dict_factory(cursor, row):
+    """Return rows as dictionaries"""
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
+
+def get_all_members():
+    conn = sqlite3.connect('chama.db')
+    conn.row_factory = dict_factory
+    c = conn.cursor()
+    c.execute("SELECT id, name FROM members ORDER BY name")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -98,106 +117,181 @@ def dashboard():
         return redirect(url_for('login'))
 
     conn = sqlite3.connect('chama.db')
+    conn.row_factory = dict_factory
     c = conn.cursor()
 
-    # Contributions per member (for pie chart)
-    c.execute('''SELECT m.id, m.name, IFNULL(SUM(c.amount), 0)
-                 FROM members m LEFT JOIN contributions c ON m.id = c.member_id 
-                 GROUP BY m.id''')
-    members_summary = c.fetchall()
+    # Members list for the select filter (members used in template)
+    c.execute("SELECT id, name FROM members ORDER BY name")
+    members = c.fetchall()
 
-    # All contributions list
-    c.execute('''SELECT m.id, m.name, c.amount, c.type, c.date
-                 FROM contributions c 
-                 JOIN members m ON c.member_id = m.id 
+    # Contributions list for the table (member_name, type, amount, date)
+    c.execute('''SELECT c.id, m.name AS member_name, c.type, c.amount, c.date
+                 FROM contributions c
+                 JOIN members m ON c.member_id = m.id
                  ORDER BY c.date DESC''')
-    all_contributions = c.fetchall()
+    contributions_rows = c.fetchall()
+    contributions = []
+    for r in contributions_rows:
+        contributions.append({
+            "id": r["id"],
+            "member_name": r["member_name"],
+            "type": r["type"],
+            "amount": r["amount"],
+            "date": r["date"]
+        })
 
-    # Loans with repayments
-    c.execute('''SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period, l.issue_date,
-                        IFNULL(SUM(r.amount_paid), 0)
+    # Loans with repayments and balances
+    c.execute('''SELECT l.id, m.name AS name, l.principal, l.interest_rate, l.repayment_period,
+                        IFNULL(SUM(r.amount_paid), 0) AS repaid, l.issue_date
                  FROM loans l
                  JOIN members m ON m.id = l.member_id
                  LEFT JOIN loan_repayments r ON l.id = r.loan_id
-                 GROUP BY l.id''')
-    loans = c.fetchall()
-    conn.close()
-
-    loan_data = []
-    total_loans = 0
-    total_repaid = 0
-    total_balance = 0
-
-    for name, loan_id, principal, rate, period, issue_date, repaid in loans:
+                 GROUP BY l.id
+                 ORDER BY l.issue_date DESC''')
+    loan_rows = c.fetchall()
+    loans = []
+    for r in loan_rows:
+        principal = r["principal"] or 0
+        rate = r["interest_rate"] or 0
+        period = r["repayment_period"] or 0
+        repaid = r["repaid"] or 0
         total_due = principal + (principal * rate * period)
         balance = total_due - repaid
-        loan_data.append((name, principal, total_due, repaid, balance, issue_date))
+        loans.append({
+            "id": r["id"],
+            "name": r["name"],
+            "principal": principal,
+            "total_due": total_due,
+            "interest": rate,
+            "repaid": repaid,
+            "balance": balance,
+            "date_applied": r["issue_date"]
+        })
 
-        total_loans += principal
-        total_repaid += repaid
-        total_balance += balance
+    # Chart data: contribution totals per member
+    c.execute('''SELECT m.name, IFNULL(SUM(c.amount), 0) AS total
+                 FROM members m
+                 LEFT JOIN contributions c ON m.id = c.member_id
+                 GROUP BY m.id
+                 ORDER BY m.name''')
+    members_summary = c.fetchall()
+    chart_labels = [r["name"] for r in members_summary]
+    chart_data = [r["total"] for r in members_summary]
 
-    # Totals
-    total_contributions = sum([row[2] for row in members_summary])
-
-    # Chart data
-    chart_labels = [row[1] for row in members_summary]
-    chart_data = [row[2] for row in members_summary]
+    conn.close()
 
     return render_template("dashboard.html",
-                           members_summary=members_summary,
-                           all_contributions=all_contributions,
-                           loans=loan_data,
+                           members=members,
+                           contributions=contributions,
+                           loans=loans,
                            chart_labels=chart_labels,
-                           chart_data=chart_data,
-                           total_contributions=total_contributions,
-                           total_loans=total_loans,
-                           total_repaid=total_repaid,
-                           total_balance=total_balance)
+                           chart_data=chart_data)
 
 
-
-
-
-from flask import jsonify
-
-@app.route('/api/dashboard')
-def api_dashboard():
+@app.route('/member/<int:member_id>')
+def member_summary(member_id):
+    """Render dashboard but filtered to a single member's contributions and loans"""
     if not session.get('admin'):
-        return jsonify({"error": "unauthorized"}), 401
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect('chama.db')
+    conn.row_factory = dict_factory
+    c = conn.cursor()
+
+    # Members list for the select filter
+    c.execute("SELECT id, name FROM members ORDER BY name")
+    members = c.fetchall()
+
+    # Member name
+    c.execute("SELECT name FROM members WHERE id = ?", (member_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        flash("Member not found")
+        return redirect(url_for('dashboard'))
+    member_name = row["name"]
+
+    # Contributions only for this member
+    c.execute('''SELECT c.id, m.name AS member_name, c.type, c.amount, c.date
+                 FROM contributions c
+                 JOIN members m ON c.member_id = m.id
+                 WHERE c.member_id = ?
+                 ORDER BY c.date DESC''', (member_id,))
+    contributions_rows = c.fetchall()
+    contributions = []
+    for r in contributions_rows:
+        contributions.append({
+            "id": r["id"],
+            "member_name": r["member_name"],
+            "type": r["type"],
+            "amount": r["amount"],
+            "date": r["date"]
+        })
+
+    # Loans only for this member
+    c.execute('''SELECT l.id, m.name AS name, l.principal, l.interest_rate, l.repayment_period,
+                        IFNULL(SUM(r.amount_paid), 0) AS repaid, l.issue_date
+                 FROM loans l
+                 JOIN members m ON m.id = l.member_id
+                 LEFT JOIN loan_repayments r ON l.id = r.loan_id
+                 WHERE l.member_id = ?
+                 GROUP BY l.id
+                 ORDER BY l.issue_date DESC''', (member_id,))
+    loan_rows = c.fetchall()
+    loans = []
+    for r in loan_rows:
+        principal = r["principal"] or 0
+        rate = r["interest_rate"] or 0
+        period = r["repayment_period"] or 0
+        repaid = r["repaid"] or 0
+        total_due = principal + (principal * rate * period)
+        balance = total_due - repaid
+        loans.append({
+            "id": r["id"],
+            "name": r["name"],
+            "principal": principal,
+            "total_due": total_due,
+            "interest": rate,
+            "repaid": repaid,
+            "balance": balance,
+            "date_applied": r["issue_date"]
+        })
+
+    # Chart: just this member (single-entry chart)
+    chart_labels = [member_name]
+    chart_data = [sum([c["amount"] for c in contributions])]
+
+    conn.close()
+
+    return render_template("dashboard.html",
+                           members=members,
+                           contributions=contributions,
+                           loans=loans,
+                           chart_labels=chart_labels,
+                           chart_data=chart_data)
+
+
+@app.route('/delete_loan/<int:loan_id>', methods=['POST'])
+def delete_loan(loan_id):
+    if not session.get('admin'):
+        return redirect(url_for('login'))
 
     conn = sqlite3.connect('chama.db')
     c = conn.cursor()
 
-    c.execute('''SELECT members.name, SUM(contributions.amount)
-                 FROM members LEFT JOIN contributions
-                 ON members.id = contributions.member_id
-                 GROUP BY members.id''')
-    contributions = c.fetchall()
+    # delete repayments, withdrawals, then loan
+    c.execute("DELETE FROM loan_repayments WHERE loan_id = ?", (loan_id,))
+    c.execute("DELETE FROM withdrawals WHERE loan_id = ?", (loan_id,))
+    c.execute("DELETE FROM loans WHERE id = ?", (loan_id,))
 
-    c.execute('''
-        SELECT m.name, l.id, l.principal, l.interest_rate, l.repayment_period,
-        IFNULL(SUM(r.amount_paid), 0)
-        FROM loans l
-        JOIN members m ON m.id = l.member_id
-        LEFT JOIN loan_repayments r ON l.id = r.loan_id
-        GROUP BY l.id
-    ''')
-    loans = c.fetchall()
+    conn.commit()
     conn.close()
-
-    loan_data = []
-    for name, loan_id, principal, rate, period, repaid in loans:
-        total_due = principal + (principal * rate * period)
-        balance = total_due - repaid
-        loan_data.append([name, principal, total_due, repaid, balance])
-
-    return jsonify({
-        "members": contributions,
-        "loans": loan_data
-    })
+    flash("Loan deleted successfully.")
+    return redirect(url_for('dashboard'))
 
 
+# --- rest of your routes (add_member, add_contribution, add_loan, repay_loan, withdraw_loan, exports, report, etc.)
+# I kept them intact from your prior code; paste them below or keep the ones you already have.
 
 @app.route('/add_member', methods=['GET', 'POST'])
 def add_member():
@@ -217,9 +311,9 @@ def add_member():
 
 @app.route("/manage_member", methods=["GET", "POST"])
 def manage_member():
-    conn = sqlite3.connect("chama.db")  # ✅ fixed
+    conn = sqlite3.connect("chama.db")
     cur = conn.cursor()
-    
+
     if request.method == "POST":
         member_id = request.form["member_id"]
         action = request.form["action"]
@@ -245,7 +339,7 @@ def manage_member():
 
 @app.route('/members')
 def show_members():
-    members = get_all_members()  # Retrieve members from your database
+    members = get_all_members()
     return render_template('members.html', members=members)
 
 
@@ -300,8 +394,6 @@ def add_loan():
     return render_template("add_loan.html", members=members)
 
 
-
-
 @app.route('/repay_loan', methods=['GET', 'POST'])
 def repay_loan():
     if not session.get('admin'):
@@ -348,6 +440,7 @@ def withdraw_loan():
 
     conn.close()
     return render_template('withdraw_loan.html', loans=loans)
+
 
 @app.route('/export/contributions/excel')
 def export_contributions_excel():
@@ -456,7 +549,6 @@ def export_loans_pdf():
     return response
 
 
-
 @app.route('/report/<int:member_id>')
 def report(member_id):
     if not session.get('admin'):
@@ -466,7 +558,12 @@ def report(member_id):
     c = conn.cursor()
 
     c.execute("SELECT name FROM members WHERE id=?", (member_id,))
-    member_name = c.fetchone()[0]
+    member_row = c.fetchone()
+    if not member_row:
+        conn.close()
+        flash("Member not found")
+        return redirect(url_for('dashboard'))
+    member_name = member_row[0]
 
     c.execute("SELECT SUM(amount) FROM contributions WHERE member_id=?", (member_id,))
     total_contributions = c.fetchone()[0] or 0
@@ -508,14 +605,14 @@ def report(member_id):
                            total_contributions=total_contributions,
                            reports=reports)
 
-import os   # <-- add this at the top with your imports
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
+
 if __name__ == "__main__":
+    init_db()
     port = int(os.environ.get("PORT", 10000))  # default to 10000 if PORT not set
     app.run(host="0.0.0.0", port=port, debug=True)
-
