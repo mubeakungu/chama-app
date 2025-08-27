@@ -12,7 +12,8 @@
                         <select class="form-select" onchange="location = this.value;">
                             <option selected disabled>-- Select Member --</option>
                             {% for member in members %}
-                                <option value="{{ url_for('member_summary', member_id=member['id']) }}">
+                                <option value="{{ url_for('member_summary', member_id=member['id']) }}"
+                                        {% if selected_member == member['id'] %}selected{% endif %}>
                                     {{ member['name'] }}
                                 </option>
                             {% endfor %}
@@ -37,7 +38,7 @@
             <div class="card shadow">
                 <div class="card-header bg-warning text-dark fw-bold">Total Loans Applied</div>
                 <div class="card-body text-center fs-4">
-                    Ksh {{ total_loans }}
+                    Ksh {{ total_loans_applied }}
                 </div>
             </div>
         </div>
@@ -45,7 +46,7 @@
             <div class="card shadow">
                 <div class="card-header bg-info text-white fw-bold">Total Interests</div>
                 <div class="card-body text-center fs-4">
-                    Ksh {{ total_interests }}
+                    Ksh {{ total_interest }}
                 </div>
             </div>
         </div>
@@ -53,7 +54,7 @@
             <div class="card shadow">
                 <div class="card-header bg-danger text-white fw-bold">Loan Balance</div>
                 <div class="card-body text-center fs-4">
-                    Ksh {{ loan_balance }}
+                    Ksh {{ total_loan_balance }}
                 </div>
             </div>
         </div>
@@ -162,4 +163,3 @@
     });
 </script>
 {% endblock %}
-
