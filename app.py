@@ -111,7 +111,7 @@ def login():
     return render_template("login.html")
 
 
-@app.route('/dashboard')
+@app.route("/dashboard")
 def dashboard():
     if not session.get('admin'):
         return redirect(url_for('login'))
@@ -120,11 +120,11 @@ def dashboard():
     conn.row_factory = dict_factory
     c = conn.cursor()
 
-    # Members list for the select filter (members used in template)
+    # Members list for the select filter
     c.execute("SELECT id, name FROM members ORDER BY name")
     members = c.fetchall()
 
-    # Contributions list for the table (member_name, type, amount, date)
+    # Contributions list for the table
     c.execute('''SELECT c.id, m.name AS member_name, c.type, c.amount, c.date
                  FROM contributions c
                  JOIN members m ON c.member_id = m.id
@@ -150,6 +150,11 @@ def dashboard():
                  ORDER BY l.issue_date DESC''')
     loan_rows = c.fetchall()
     loans = []
+
+    total_loans = 0
+    total_balances = 0
+    total_interests = 0
+
     for r in loan_rows:
         principal = r["principal"] or 0
         rate = r["interest_rate"] or 0
@@ -157,6 +162,11 @@ def dashboard():
         repaid = r["repaid"] or 0
         total_due = principal + (principal * rate * period)
         balance = total_due - repaid
+
+        total_loans += principal
+        total_balances += balance
+        total_interests += (principal * rate * period)
+
         loans.append({
             "id": r["id"],
             "name": r["name"],
@@ -178,6 +188,10 @@ def dashboard():
     chart_labels = [r["name"] for r in members_summary]
     chart_data = [r["total"] for r in members_summary]
 
+    # Total contributions
+    c.execute("SELECT IFNULL(SUM(amount), 0) AS total FROM contributions")
+    total_contributions = c.fetchone()["total"]
+
     conn.close()
 
     return render_template("dashboard.html",
@@ -185,7 +199,12 @@ def dashboard():
                            contributions=contributions,
                            loans=loans,
                            chart_labels=chart_labels,
-                           chart_data=chart_data)
+                           chart_data=chart_data,
+                           total_contributions=total_contributions,
+                           total_loans=total_loans,
+                           total_balances=total_balances,
+                           total_interests=total_interests)
+
 
 
 @app.route('/member/<int:member_id>')
