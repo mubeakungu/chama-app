@@ -258,13 +258,24 @@ def member_summary(member_id):
                  ORDER BY l.issue_date DESC''', (member_id,))
     loan_rows = c.fetchall()
     loans = []
+    total_loans_applied = 0
+    total_loan_balance = 0
+    total_interest = 0
+
     for r in loan_rows:
         principal = r["principal"] or 0
         rate = r["interest_rate"] or 0
         period = r["repayment_period"] or 0
         repaid = r["repaid"] or 0
-        total_due = principal + (principal * rate * period)
+
+        interest_amount = principal * rate * period
+        total_due = principal + interest_amount
         balance = total_due - repaid
+
+        total_loans_applied += principal
+        total_loan_balance += balance
+        total_interest += interest_amount
+
         loans.append({
             "id": r["id"],
             "name": r["name"],
@@ -276,9 +287,12 @@ def member_summary(member_id):
             "date_applied": r["issue_date"]
         })
 
+    # Totals for contributions
+    total_contributions = sum([c["amount"] for c in contributions])
+
     # Chart: just this member (single-entry chart)
     chart_labels = [member_name]
-    chart_data = [sum([c["amount"] for c in contributions])]
+    chart_data = [total_contributions]
 
     conn.close()
 
@@ -287,7 +301,13 @@ def member_summary(member_id):
                            contributions=contributions,
                            loans=loans,
                            chart_labels=chart_labels,
-                           chart_data=chart_data)
+                           chart_data=chart_data,
+                           total_contributions=total_contributions,
+                           total_loans_applied=total_loans_applied,
+                           total_interest=total_interest,
+                           total_loan_balance=total_loan_balance,
+                           selected_member=member_id)
+
 
 
 @app.route('/delete_loan/<int:loan_id>', methods=['POST'])
