@@ -9,8 +9,16 @@ app = Flask(__name__)
 app.secret_key = 'supersecret'
 
 
-def init_db():
+# --- ADDED: always enable foreign key enforcement on each connection ---
+def get_connection():
     conn = sqlite3.connect('chama.db')
+    conn.execute('PRAGMA foreign_keys = ON')
+    return conn
+# ---------------------------------------------------------------------
+
+
+def init_db():
+    conn = get_connection()
     c = conn.cursor()
 
     # Admin
@@ -33,8 +41,8 @@ def init_db():
         amount REAL,
         type TEXT,
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(member_id) REFERENCES members(id)
-    )''')
+        FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
+    )''')  # <-- ADDED ON DELETE CASCADE
 
     # Loans
     c.execute('''CREATE TABLE IF NOT EXISTS loans (
@@ -45,8 +53,8 @@ def init_db():
         interest_rate REAL,
         repayment_period INTEGER,
         issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(member_id) REFERENCES members(id)
-    )''')
+        FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
+    )''')  # <-- ADDED ON DELETE CASCADE
 
     # Withdrawals
     c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
@@ -54,8 +62,8 @@ def init_db():
         loan_id INTEGER,
         amount REAL,
         disbursed_date TEXT,
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-    )''')
+        FOREIGN KEY(loan_id) REFERENCES loans(id) ON DELETE CASCADE
+    )''')  # <-- ADDED ON DELETE CASCADE
 
     # Loan Repayments
     c.execute('''CREATE TABLE IF NOT EXISTS loan_repayments (
@@ -63,8 +71,8 @@ def init_db():
         loan_id INTEGER,
         amount_paid REAL,
         payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(loan_id) REFERENCES loans(id)
-    )''')
+        FOREIGN KEY(loan_id) REFERENCES loans(id) ON DELETE CASCADE
+    )''')  # <-- ADDED ON DELETE CASCADE
 
     # Default admin
     c.execute("SELECT * FROM admin WHERE username = 'admin'")
@@ -84,7 +92,7 @@ def dict_factory(cursor, row):
 
 
 def get_all_members():
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     conn.row_factory = dict_factory
     c = conn.cursor()
     c.execute("SELECT id, name FROM members ORDER BY name")
@@ -98,7 +106,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        conn = sqlite3.connect('chama.db')
+        conn = get_connection()
         c = conn.cursor()
         c.execute("SELECT * FROM admin WHERE username=? AND password=?", (username, password))
         admin = c.fetchone()
@@ -116,7 +124,7 @@ def dashboard():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     conn.row_factory = dict_factory
     c = conn.cursor()
 
@@ -214,7 +222,7 @@ def member_summary(member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     conn.row_factory = dict_factory
     c = conn.cursor()
 
@@ -316,12 +324,10 @@ def delete_loan(loan_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
 
-    # delete repayments, withdrawals, then loan
-    c.execute("DELETE FROM loan_repayments WHERE loan_id = ?", (loan_id,))
-    c.execute("DELETE FROM withdrawals WHERE loan_id = ?", (loan_id,))
+    # With ON DELETE CASCADE, deleting the loan will delete withdrawals & repayments automatically
     c.execute("DELETE FROM loans WHERE id = ?", (loan_id,))
 
     conn.commit()
@@ -340,7 +346,7 @@ def add_member():
 
     if request.method == 'POST':
         name = request.form['name']
-        conn = sqlite3.connect('chama.db')
+        conn = get_connection()
         c = conn.cursor()
         c.execute("INSERT INTO members (name) VALUES (?)", (name,))
         conn.commit()
@@ -351,7 +357,7 @@ def add_member():
 
 @app.route("/manage_member", methods=["GET", "POST"])
 def manage_member():
-    conn = sqlite3.connect("chama.db")
+    conn = get_connection()
     cur = conn.cursor()
 
     if request.method == "POST":
@@ -363,7 +369,7 @@ def manage_member():
         elif action == "revoke":
             cur.execute("UPDATE members SET status = 'revoked' WHERE id = ?", (member_id,))
         elif action == "remove":
-            cur.execute("DELETE FROM loans WHERE member_id = ?", (member_id,))
+            # With cascade, removing the member removes loans, contributions, repayments, withdrawals
             cur.execute("DELETE FROM members WHERE id = ?", (member_id,))
 
         conn.commit()
@@ -388,7 +394,7 @@ def add_contribution():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
     c.execute("SELECT * FROM members")
     members = c.fetchall()
@@ -412,7 +418,7 @@ def add_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
     c.execute("SELECT * FROM members")
     members = c.fetchall()
@@ -439,7 +445,7 @@ def repay_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''SELECT loans.id, members.name, loans.principal
                  FROM loans JOIN members ON loans.member_id = members.id''')
@@ -462,7 +468,7 @@ def withdraw_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''SELECT loans.id, members.name, loans.principal
                  FROM loans JOIN members ON loans.member_id = members.id''')
@@ -487,7 +493,7 @@ def export_contributions_excel():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     df = pd.read_sql_query('''
         SELECT m.name AS Member, c.amount AS Amount, c.type AS Type, c.date AS Date
         FROM contributions c JOIN members m ON c.member_id = m.id
@@ -504,7 +510,7 @@ def export_contributions_pdf():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''SELECT m.name, c.amount, c.type, c.date
                  FROM contributions c JOIN members m ON c.member_id = m.id
@@ -532,7 +538,7 @@ def export_loans_excel():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     query = '''SELECT m.name AS Member, l.loan_type AS LoanType, l.principal AS Principal,
                       l.interest_rate AS InterestRate, l.repayment_period AS Period,
                       IFNULL(SUM(r.amount_paid), 0) AS Repaid, l.issue_date AS IssueDate
@@ -556,7 +562,7 @@ def export_loans_pdf():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''SELECT m.name, l.loan_type, l.principal, l.interest_rate, l.repayment_period,
                         IFNULL(SUM(r.amount_paid), 0), l.issue_date
@@ -594,7 +600,7 @@ def report(member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('chama.db')
+    conn = get_connection()
     c = conn.cursor()
 
     c.execute("SELECT name FROM members WHERE id=?", (member_id,))
@@ -656,3 +662,4 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 10000))  # default to 10000 if PORT not set
     app.run(host="0.0.0.0", port=port, debug=True)
+
