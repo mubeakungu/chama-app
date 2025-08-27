@@ -151,9 +151,9 @@ def dashboard():
     loan_rows = c.fetchall()
     loans = []
 
-    total_loans = 0
-    total_balances = 0
-    total_interests = 0
+    total_loans_applied = 0
+    total_loan_balance = 0
+    total_interest = 0
 
     for r in loan_rows:
         principal = r["principal"] or 0
@@ -163,9 +163,9 @@ def dashboard():
         total_due = principal + (principal * rate * period)
         balance = total_due - repaid
 
-        total_loans += principal
-        total_balances += balance
-        total_interests += (principal * rate * period)
+        total_loans_applied += principal
+        total_loan_balance += balance
+        total_interest += (principal * rate * period)
 
         loans.append({
             "id": r["id"],
@@ -201,9 +201,10 @@ def dashboard():
                            chart_labels=chart_labels,
                            chart_data=chart_data,
                            total_contributions=total_contributions,
-                           total_loans=total_loans,
-                           total_balances=total_balances,
-                           total_interests=total_interests)
+                           total_loans_applied=total_loans_applied,
+                           total_interest=total_interest,
+                           total_loan_balance=total_loan_balance)
+
 
 
 
