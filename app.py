@@ -29,6 +29,17 @@ def init_db():
             print(f"🛠 Adding missing column: {table}.{column}")
             c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
 
+    # --- IMPORTANT: Drop tables in reverse order of dependency ---
+    # This ensures that foreign key constraints don't prevent dropping tables.
+    print("🔄 Dropping existing tables (if any)...")
+    c.execute("DROP TABLE IF EXISTS loan_repayments")
+    c.execute("DROP TABLE IF EXISTS withdrawals")
+    c.execute("DROP TABLE IF EXISTS loans")
+    c.execute("DROP TABLE IF EXISTS contributions")
+    c.execute("DROP TABLE IF EXISTS members")
+    c.execute("DROP TABLE IF EXISTS admin")
+    print("✅ Tables dropped.")
+
     # --- Admin table ---
     c.execute('''CREATE TABLE IF NOT EXISTS admin (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,6 +102,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+
 
 
 def dict_factory(cursor, row):
