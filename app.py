@@ -365,26 +365,34 @@ def manage_member():
     conn.row_factory = dict_factory
     cur = conn.cursor()
 
-    if request.method == "POST":
-        member_id = request.form["member_id"]
-        action = request.form["action"]
+    try:
+        if request.method == "POST":
+            member_id = request.form.get("member_id")
+            action = request.form.get("action")
 
-        if action == "accept":
-            cur.execute("UPDATE members SET status = 'accepted' WHERE id = ?", (member_id,))
-        elif action == "revoke":
-            cur.execute("UPDATE members SET status = 'revoked' WHERE id = ?", (member_id,))
-        elif action == "remove":
-            cur.execute("DELETE FROM members WHERE id = ?", (member_id,))
+            if member_id and action:
+                if action == "accept":
+                    cur.execute("UPDATE members SET status = 'accepted' WHERE id = ?", (member_id,))
+                elif action == "revoke":
+                    cur.execute("UPDATE members SET status = 'revoked' WHERE id = ?", (member_id,))
+                elif action == "remove":
+                    cur.execute("DELETE FROM members WHERE id = ?", (member_id,))
+                conn.commit()
+                flash("Action completed successfully.")
+                return redirect("/manage_member")
 
-        conn.commit()
+        # Use COALESCE in case status column is missing/null
+        cur.execute("SELECT id, name, COALESCE(status, 'pending') as status FROM members")
+        members = cur.fetchall()
+
+        return render_template("manage_member.html", members=members)
+
+    except Exception as e:
         conn.close()
-        flash("Action completed successfully.")
-        return redirect("/manage_member")
+        return f"Error in manage_member: {e}", 500
+    finally:
+        conn.close()
 
-    cur.execute("SELECT id, name, status FROM members")
-    members = cur.fetchall()
-    conn.close()
-    return render_template("manage_member.html", members=members)
 @app.route('/members')
 def show_members():
     members = get_all_members()
