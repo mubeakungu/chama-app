@@ -21,22 +21,31 @@ def init_db():
     conn = get_connection()
     c = conn.cursor()
 
-    # --- Create tables if not exists ---
-    # Admin
+    # --- Helper: add column if missing ---
+    def add_column_if_missing(table, column, col_def):
+        c.execute(f"PRAGMA table_info({table})")
+        cols = [col[1] for col in c.fetchall()]
+        if column not in cols:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+
+    # --- Admin table ---
     c.execute('''CREATE TABLE IF NOT EXISTS admin (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
         password TEXT NOT NULL
     )''')
 
-    # Members
+    # --- Members table ---
     c.execute('''CREATE TABLE IF NOT EXISTS members (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL
-        -- status will be added below if missing
     )''')
+    add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
+    # you can add more fields later:
+    # add_column_if_missing("members", "email", "TEXT")
+    # add_column_if_missing("members", "phone", "TEXT")
 
-    # Contributions
+    # --- Contributions table ---
     c.execute('''CREATE TABLE IF NOT EXISTS contributions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         member_id INTEGER,
@@ -45,8 +54,9 @@ def init_db():
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
     )''')
+    # Example: add_column_if_missing("contributions", "notes", "TEXT")
 
-    # Loans
+    # --- Loans table ---
     c.execute('''CREATE TABLE IF NOT EXISTS loans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         member_id INTEGER,
@@ -57,8 +67,9 @@ def init_db():
         issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
     )''')
+    # Example: add_column_if_missing("loans", "status", "TEXT DEFAULT 'active'")
 
-    # Withdrawals
+    # --- Withdrawals table ---
     c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         loan_id INTEGER,
@@ -67,7 +78,7 @@ def init_db():
         FOREIGN KEY(loan_id) REFERENCES loans(id) ON DELETE CASCADE
     )''')
 
-    # Loan Repayments
+    # --- Loan Repayments table ---
     c.execute('''CREATE TABLE IF NOT EXISTS loan_repayments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         loan_id INTEGER,
@@ -76,20 +87,13 @@ def init_db():
         FOREIGN KEY(loan_id) REFERENCES loans(id) ON DELETE CASCADE
     )''')
 
-    # --- Migration checks: add missing columns if needed ---
-    c.execute("PRAGMA table_info(members)")
-    member_columns = [col[1] for col in c.fetchall()]
-    if "status" not in member_columns:
-        c.execute("ALTER TABLE members ADD COLUMN status TEXT DEFAULT 'pending'")
-
-    # --- Default admin user ---
+    # --- Default admin ---
     c.execute("SELECT * FROM admin WHERE username = 'admin'")
     if not c.fetchone():
         c.execute("INSERT INTO admin (username, password) VALUES (?, ?)", ('admin', 'pass123'))
 
     conn.commit()
     conn.close()
-
 
 def dict_factory(cursor, row):
     """Return rows as dictionaries"""
