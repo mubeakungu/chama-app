@@ -26,6 +26,7 @@ def init_db():
         c.execute(f"PRAGMA table_info({table})")
         cols = [col[1] for col in c.fetchall()]
         if column not in cols:
+            print(f"🛠 Adding missing column: {table}.{column}")
             c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
 
     # --- Admin table ---
@@ -40,10 +41,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL
     )''')
+    # Always make sure "status" exists
     add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
-    # you can add more fields later:
-    # add_column_if_missing("members", "email", "TEXT")
-    # add_column_if_missing("members", "phone", "TEXT")
 
     # --- Contributions table ---
     c.execute('''CREATE TABLE IF NOT EXISTS contributions (
@@ -54,7 +53,6 @@ def init_db():
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
     )''')
-    # Example: add_column_if_missing("contributions", "notes", "TEXT")
 
     # --- Loans table ---
     c.execute('''CREATE TABLE IF NOT EXISTS loans (
@@ -67,7 +65,6 @@ def init_db():
         issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
     )''')
-    # Example: add_column_if_missing("loans", "status", "TEXT DEFAULT 'active'")
 
     # --- Withdrawals table ---
     c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
@@ -94,6 +91,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+
 
 def dict_factory(cursor, row):
     """Return rows as dictionaries"""
