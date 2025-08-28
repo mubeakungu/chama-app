@@ -28,10 +28,11 @@ def init_db():
         password TEXT NOT NULL
     )''')
 
-    # Members
+    # Members (added status column)
     c.execute('''CREATE TABLE IF NOT EXISTS members (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        status TEXT DEFAULT 'pending'
     )''')
 
     # Contributions
@@ -357,7 +358,11 @@ def add_member():
 
 @app.route("/manage_member", methods=["GET", "POST"])
 def manage_member():
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+
     conn = get_connection()
+    conn.row_factory = dict_factory
     cur = conn.cursor()
 
     if request.method == "POST":
@@ -369,7 +374,6 @@ def manage_member():
         elif action == "revoke":
             cur.execute("UPDATE members SET status = 'revoked' WHERE id = ?", (member_id,))
         elif action == "remove":
-            # With cascade, removing the member removes loans, contributions, repayments, withdrawals
             cur.execute("DELETE FROM members WHERE id = ?", (member_id,))
 
         conn.commit()
@@ -377,12 +381,10 @@ def manage_member():
         flash("Action completed successfully.")
         return redirect("/manage_member")
 
-    cur.execute("SELECT id, name FROM members")
+    cur.execute("SELECT id, name, status FROM members")
     members = cur.fetchall()
     conn.close()
     return render_template("manage_member.html", members=members)
-
-
 @app.route('/members')
 def show_members():
     members = get_all_members()
