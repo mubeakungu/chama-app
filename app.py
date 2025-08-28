@@ -21,6 +21,7 @@ def init_db():
     conn = get_connection()
     c = conn.cursor()
 
+    # --- Create tables if not exists ---
     # Admin
     c.execute('''CREATE TABLE IF NOT EXISTS admin (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,11 +29,11 @@ def init_db():
         password TEXT NOT NULL
     )''')
 
-    # Members (added status column)
+    # Members
     c.execute('''CREATE TABLE IF NOT EXISTS members (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        status TEXT DEFAULT 'pending'
+        name TEXT NOT NULL
+        -- status will be added below if missing
     )''')
 
     # Contributions
@@ -43,7 +44,7 @@ def init_db():
         type TEXT,
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
-    )''')  # <-- ADDED ON DELETE CASCADE
+    )''')
 
     # Loans
     c.execute('''CREATE TABLE IF NOT EXISTS loans (
@@ -55,7 +56,7 @@ def init_db():
         repayment_period INTEGER,
         issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
-    )''')  # <-- ADDED ON DELETE CASCADE
+    )''')
 
     # Withdrawals
     c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
@@ -64,7 +65,7 @@ def init_db():
         amount REAL,
         disbursed_date TEXT,
         FOREIGN KEY(loan_id) REFERENCES loans(id) ON DELETE CASCADE
-    )''')  # <-- ADDED ON DELETE CASCADE
+    )''')
 
     # Loan Repayments
     c.execute('''CREATE TABLE IF NOT EXISTS loan_repayments (
@@ -73,9 +74,15 @@ def init_db():
         amount_paid REAL,
         payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(loan_id) REFERENCES loans(id) ON DELETE CASCADE
-    )''')  # <-- ADDED ON DELETE CASCADE
+    )''')
 
-    # Default admin
+    # --- Migration checks: add missing columns if needed ---
+    c.execute("PRAGMA table_info(members)")
+    member_columns = [col[1] for col in c.fetchall()]
+    if "status" not in member_columns:
+        c.execute("ALTER TABLE members ADD COLUMN status TEXT DEFAULT 'pending'")
+
+    # --- Default admin user ---
     c.execute("SELECT * FROM admin WHERE username = 'admin'")
     if not c.fetchone():
         c.execute("INSERT INTO admin (username, password) VALUES (?, ?)", ('admin', 'pass123'))
