@@ -1,23 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card shadow">
-    <div class="card-header bg-dark text-white fw-bold">Manage Members</div>
+    <div class="card-header bg-primary text-white fw-bold">Manage Members</div>
     <div class="card-body">
-        <form method="POST">
-            <div class="mb-3">
-                <label for="member_id" class="form-label">Select Member</label>
-                <select name="member_id" class="form-select" required>
-                    {% for member in members %}
-                        <option value="{{ member[0] }}">{{ member[1] }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="d-flex gap-2">
-                <button name="action" value="accept" class="btn btn-success"><i class="fas fa-check-circle"></i> Accept</button>
-                <button name="action" value="revoke" class="btn btn-warning"><i class="fas fa-ban"></i> Revoke</button>
-                <button name="action" value="remove" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Remove</button>
-            </div>
-        </form>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Member ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td>{{ member.id }}</td>
+                    <td>{{ member.name }}</td>
+                    <td>
+                        {% if member.status == "accepted" %}
+                            <span class="badge bg-success">Accepted</span>
+                        {% elif member.status == "revoked" %}
+                            <span class="badge bg-danger">Revoked</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                            <button type="submit" name="action" value="accept" class="btn btn-success btn-sm">Accept</button>
+                        </form>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                            <button type="submit" name="action" value="revoke" class="btn btn-warning btn-sm">Revoke</button>
+                        </form>
+                        <form method="POST" style="display:inline;" 
+                              onsubmit="return confirm('Are you sure you want to remove this member? This will also delete all their loans, contributions, repayments, and withdrawals.');">
+                            <input type="hidden" name="member_id" value="{{ member.id }}">
+                            <button type="submit" name="action" value="remove" class="btn btn-danger btn-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
+
