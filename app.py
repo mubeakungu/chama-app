@@ -9,12 +9,12 @@ app = Flask(__name__)
 app.secret_key = 'supersecret'
 
 
-# --- ADDED: always enable foreign key enforcement on each connection ---
+# --- Always enable foreign key enforcement on each connection ---
 def get_connection():
     conn = sqlite3.connect('chama.db')
     conn.execute('PRAGMA foreign_keys = ON')
     return conn
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------------
 
 
 def init_db():
@@ -29,16 +29,8 @@ def init_db():
             print(f"🛠 Adding missing column: {table}.{column}")
             c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
 
-    # --- IMPORTANT: Drop tables in reverse order of dependency ---
-    # This ensures that foreign key constraints don't prevent dropping tables.
-    print("🔄 Dropping existing tables (if any)...")
-    c.execute("DROP TABLE IF EXISTS loan_repayments")
-    c.execute("DROP TABLE IF EXISTS withdrawals")
-    c.execute("DROP TABLE IF EXISTS loans")
-    c.execute("DROP TABLE IF EXISTS contributions")
-    c.execute("DROP TABLE IF EXISTS members")
-    c.execute("DROP TABLE IF EXISTS admin")
-    print("✅ Tables dropped.")
+    # IMPORTANT: Do NOT drop tables here. That was erasing your data on every restart.
+    # If you ever need a full reset, do it manually or behind an env flag.
 
     # --- Admin table ---
     c.execute('''CREATE TABLE IF NOT EXISTS admin (
@@ -46,22 +38,21 @@ def init_db():
         username TEXT NOT NULL,
         password TEXT NOT NULL
     )''')
-             # --- Members table ---
-    c.execute('''CREATE TABLE IF NOT EXISTS members (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          phone TEXT,
-          email TEXT,
-          join_date DATE,
-          status TEXT DEFAULT 'pending'
-   )''')
 
-            # Ensure columns exist in case table already exists without them
+    # --- Members table ---
+    c.execute('''CREATE TABLE IF NOT EXISTS members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT,
+        join_date DATE,
+        status TEXT DEFAULT 'pending'
+    )''')
+    # Patch existing DBs that might lack columns
     add_column_if_missing("members", "phone", "TEXT")
     add_column_if_missing("members", "email", "TEXT")
     add_column_if_missing("members", "join_date", "DATE")
     add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
-
 
     # --- Contributions table ---
     c.execute('''CREATE TABLE IF NOT EXISTS contributions (
@@ -104,13 +95,12 @@ def init_db():
     )''')
 
     # --- Default admin ---
-    c.execute("SELECT * FROM admin WHERE username = 'admin'")
+    c.execute("SELECT 1 FROM admin WHERE username = 'admin'")
     if not c.fetchone():
         c.execute("INSERT INTO admin (username, password) VALUES (?, ?)", ('admin', 'pass123'))
 
     conn.commit()
     conn.close()
-
 
 
 def dict_factory(cursor, row):
@@ -168,15 +158,13 @@ def dashboard():
                  JOIN members m ON c.member_id = m.id
                  ORDER BY c.date DESC''')
     contributions_rows = c.fetchall()
-    contributions = []
-    for r in contributions_rows:
-        contributions.append({
-            "id": r["id"],
-            "member_name": r["member_name"],
-            "type": r["type"],
-            "amount": r["amount"],
-            "date": r["date"]
-        })
+    contributions = [{
+        "id": r["id"],
+        "member_name": r["member_name"],
+        "type": r["type"],
+        "amount": r["amount"],
+        "date": r["date"]
+    } for r in contributions_rows]
 
     # Loans with repayments and balances
     c.execute('''SELECT l.id, m.name AS name, l.principal, l.interest_rate, l.repayment_period,
@@ -244,8 +232,6 @@ def dashboard():
                            total_loan_balance=total_loan_balance)
 
 
-
-
 @app.route('/member/<int:member_id>')
 def member_summary(member_id):
     """Render dashboard but filtered to a single member's contributions and loans"""
@@ -276,15 +262,13 @@ def member_summary(member_id):
                  WHERE c.member_id = ?
                  ORDER BY c.date DESC''', (member_id,))
     contributions_rows = c.fetchall()
-    contributions = []
-    for r in contributions_rows:
-        contributions.append({
-            "id": r["id"],
-            "member_name": r["member_name"],
-            "type": r["type"],
-            "amount": r["amount"],
-            "date": r["date"]
-        })
+    contributions = [{
+        "id": r["id"],
+        "member_name": r["member_name"],
+        "type": r["type"],
+        "amount": r["amount"],
+        "date": r["date"]
+    } for r in contributions_rows]
 
     # Loans only for this member
     c.execute('''SELECT l.id, m.name AS name, l.principal, l.interest_rate, l.repayment_period,
@@ -327,7 +311,7 @@ def member_summary(member_id):
         })
 
     # Totals for contributions
-    total_contributions = sum([c["amount"] for c in contributions])
+    total_contributions = sum([c_["amount"] for c_ in contributions])
 
     # Chart: just this member (single-entry chart)
     chart_labels = [member_name]
@@ -348,7 +332,6 @@ def member_summary(member_id):
                            selected_member=member_id)
 
 
-
 @app.route('/delete_loan/<int:loan_id>', methods=['POST'])
 def delete_loan(loan_id):
     if not session.get('admin'):
@@ -356,18 +339,15 @@ def delete_loan(loan_id):
 
     conn = get_connection()
     c = conn.cursor()
-
     # With ON DELETE CASCADE, deleting the loan will delete withdrawals & repayments automatically
     c.execute("DELETE FROM loans WHERE id = ?", (loan_id,))
-
     conn.commit()
     conn.close()
     flash("Loan deleted successfully.")
     return redirect(url_for('dashboard'))
 
 
-# --- rest of your routes (add_member, add_contribution, add_loan, repay_loan, withdraw_loan, exports, report, etc.)
-# I kept them intact from your prior code; paste them below or keep the ones you already have.
+# ----------------- CRUD ROUTES -----------------
 
 @app.route('/add_member', methods=['GET', 'POST'])
 def add_member():
@@ -382,16 +362,13 @@ def add_member():
 
         conn = get_connection()
         c = conn.cursor()
-        c.execute('''INSERT INTO members (name, phone, email, join_date) 
-                     VALUES (?, ?, ?, ?)''',
-                  (name, phone, email, join_date))
+        c.execute('''INSERT INTO members (name, phone, email, join_date)
+                     VALUES (?, ?, ?, ?)''', (name, phone, email, join_date))
         conn.commit()
         conn.close()
-
         return redirect(url_for('dashboard'))
 
     return render_template('add_member.html')
-
 
 
 @app.route("/manage_member", methods=["GET", "POST"])
@@ -419,7 +396,6 @@ def manage_member():
                 flash("Action completed successfully.")
                 return redirect("/manage_member")
 
-        # Use COALESCE in case status column is missing/null
         cur.execute("SELECT id, name, COALESCE(status, 'pending') as status FROM members")
         members = cur.fetchall()
 
@@ -430,6 +406,7 @@ def manage_member():
         return f"Error in manage_member: {e}", 500
     finally:
         conn.close()
+
 
 @app.route('/members')
 def show_members():
@@ -444,17 +421,17 @@ def add_contribution():
 
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM members")
-    members = c.fetchall()
+    c.execute("SELECT id, name FROM members ORDER BY name")
+    members = c.fetchall()  # tuples (id, name) for template
 
     if request.method == 'POST':
         member_id = request.form['member_id']
         amount = float(request.form['amount'])
         contribution_type = request.form['type']
-         date = request.form['date']
-              c.execute("INSERT INTO contributions (member_id, amount, type, date) VALUES (?, ?, ?, ?)",
-                              (member_id, amount, contribution_type, date))
+        date = request.form['date']  # ✅ use selected date
 
+        c.execute("INSERT INTO contributions (member_id, amount, type, date) VALUES (?, ?, ?, ?)",
+                  (member_id, amount, contribution_type, date))
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -470,7 +447,7 @@ def add_loan():
 
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM members")
+    c.execute("SELECT id, name FROM members ORDER BY name")
     members = c.fetchall()
 
     if request.method == 'POST':
@@ -479,11 +456,11 @@ def add_loan():
         principal = float(request.form['principal'])
         interest_rate = float(request.form['interest_rate'])
         repayment_period = int(request.form['repayment_period'])
-        date = request.form['date']
-          c.execute('''INSERT INTO loans (member_id, loan_type, principal, interest_rate, repayment_period, issue_date)
+        date = request.form['date']  # ✅ use selected date
+
+        c.execute('''INSERT INTO loans (member_id, loan_type, principal, interest_rate, repayment_period, issue_date)
                      VALUES (?, ?, ?, ?, ?, ?)''',
                   (member_id, loan_type, principal, interest_rate, repayment_period, date))
-
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -506,10 +483,10 @@ def repay_loan():
     if request.method == 'POST':
         loan_id = request.form['loan_id']
         amount_paid = float(request.form['amount_paid'])
-        date = request.form['date']
-        c.execute("INSERT INTO loan_repayments (loan_id, amount_paid, payment_date) VALUES (?, ?, ?)",
-          (loan_id, amount_paid, date))
+        date = request.form['date']  # ✅ use selected date
 
+        c.execute("INSERT INTO loan_repayments (loan_id, amount_paid, payment_date) VALUES (?, ?, ?)",
+                  (loan_id, amount_paid, date))
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -532,8 +509,8 @@ def withdraw_loan():
     if request.method == 'POST':
         loan_id = request.form['loan_id']
         amount = float(request.form['amount'])
-        disbursed_date = request.form['disbursed_date']
-        
+        disbursed_date = request.form['disbursed_date']  # ✅ use selected date
+
         c.execute("INSERT INTO withdrawals (loan_id, amount, disbursed_date) VALUES (?, ?, ?)",
                   (loan_id, amount, disbursed_date))
         conn.commit()
@@ -543,6 +520,8 @@ def withdraw_loan():
     conn.close()
     return render_template('withdraw_loan.html', loans=loans)
 
+
+# ----------------- EXPORTS -----------------
 
 @app.route('/export/contributions/excel')
 def export_contributions_excel():
@@ -605,7 +584,7 @@ def export_loans_excel():
     df = pd.read_sql_query(query, conn)
     conn.close()
 
-    df['TotalDue'] = df['Principal'] + (df['Principal'] * df['InterestRate'] * df['Period'])
+    df['TotalDue'] = df['Principal'] * (1 + df['InterestRate'] * df['Period'])
     df['Balance'] = df['TotalDue'] - df['Repaid']
 
     file_path = "loans_report.xlsx"
@@ -718,4 +697,5 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 10000))  # default to 10000 if PORT not set
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
