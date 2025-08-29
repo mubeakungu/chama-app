@@ -46,14 +46,22 @@ def init_db():
         username TEXT NOT NULL,
         password TEXT NOT NULL
     )''')
+# --- Members table ---
+c.execute('''CREATE TABLE IF NOT EXISTS members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    join_date DATE,
+    status TEXT DEFAULT 'pending'
+)''')
 
-    # --- Members table ---
-    c.execute('''CREATE TABLE IF NOT EXISTS members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-    )''')
-    # Always make sure "status" exists
-    add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
+# Ensure columns exist in case table already exists without them
+add_column_if_missing("members", "phone", "TEXT")
+add_column_if_missing("members", "email", "TEXT")
+add_column_if_missing("members", "join_date", "DATE")
+add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
+
 
     # --- Contributions table ---
     c.execute('''CREATE TABLE IF NOT EXISTS contributions (
