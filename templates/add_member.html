@@ -5,9 +5,25 @@
     <div class="card-body">
         <form method="post">
             <div class="mb-3">
-                <label for="name" class="form-label">Member Name</label>
-                <input type="text" name="name" id="name" class="form-control" required>
+               <label class="form-label">Name</label>
+                <input type="text" name="name" class="form-control" required>
+         </div>
+
+          <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input type="text" name="phone" class="form-control">
+          </div>
+
+          <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control">
+          </div>
+
+           <div class="mb-3">
+                <label class="form-label">Join Date</label>
+                <input type="date" name="join_date" class="form-control">
             </div>
+
             <div class="d-grid">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add Member</button>
             </div>
