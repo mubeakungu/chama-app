@@ -46,21 +46,21 @@ def init_db():
         username TEXT NOT NULL,
         password TEXT NOT NULL
     )''')
-# --- Members table ---
-c.execute('''CREATE TABLE IF NOT EXISTS members (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    phone TEXT,
-    email TEXT,
-    join_date DATE,
-    status TEXT DEFAULT 'pending'
-)''')
+             # --- Members table ---
+    c.execute('''CREATE TABLE IF NOT EXISTS members (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT,
+          email TEXT,
+          join_date DATE,
+          status TEXT DEFAULT 'pending'
+   )''')
 
-# Ensure columns exist in case table already exists without them
-add_column_if_missing("members", "phone", "TEXT")
-add_column_if_missing("members", "email", "TEXT")
-add_column_if_missing("members", "join_date", "DATE")
-add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
+            # Ensure columns exist in case table already exists without them
+    add_column_if_missing("members", "phone", "TEXT")
+    add_column_if_missing("members", "email", "TEXT")
+    add_column_if_missing("members", "join_date", "DATE")
+    add_column_if_missing("members", "status", "TEXT DEFAULT 'pending'")
 
 
     # --- Contributions table ---
@@ -452,8 +452,9 @@ def add_contribution():
         amount = float(request.form['amount'])
         contribution_type = request.form['type']
          date = request.form['date']
-        c.execute("INSERT INTO contributions (member_id, amount, type, date) VALUES (?, ?, ?)",
-                  (member_id, amount, contribution_type, date))
+              c.execute("INSERT INTO contributions (member_id, amount, type, date) VALUES (?, ?, ?, ?)",
+                              (member_id, amount, contribution_type, date))
+
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -479,9 +480,10 @@ def add_loan():
         interest_rate = float(request.form['interest_rate'])
         repayment_period = int(request.form['repayment_period'])
         date = request.form['date']
-        c.execute('''INSERT INTO loans (member_id, loan_type, principal, interest_rate, repayment_period, date)
-                     VALUES (?, ?, ?, ?, ?)''',
+          c.execute('''INSERT INTO loans (member_id, loan_type, principal, interest_rate, repayment_period, issue_date)
+                     VALUES (?, ?, ?, ?, ?, ?)''',
                   (member_id, loan_type, principal, interest_rate, repayment_period, date))
+
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -505,7 +507,9 @@ def repay_loan():
         loan_id = request.form['loan_id']
         amount_paid = float(request.form['amount_paid'])
         date = request.form['date']
-        c.execute("INSERT INTO loan_repayments (loan_id, amount_paid) VALUES (?, ?)", (loan_id, amount_paid, date))
+        c.execute("INSERT INTO loan_repayments (loan_id, amount_paid, payment_date) VALUES (?, ?, ?)",
+          (loan_id, amount_paid, date))
+
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
