@@ -368,13 +368,22 @@ def add_member():
 
     if request.method == 'POST':
         name = request.form['name']
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        join_date = request.form.get('join_date')
+
         conn = get_connection()
         c = conn.cursor()
-        c.execute("INSERT INTO members (name) VALUES (?)", (name,))
+        c.execute('''INSERT INTO members (name, phone, email, join_date) 
+                     VALUES (?, ?, ?, ?)''',
+                  (name, phone, email, join_date))
         conn.commit()
         conn.close()
+
         return redirect(url_for('dashboard'))
+
     return render_template('add_member.html')
+
 
 
 @app.route("/manage_member", methods=["GET", "POST"])
@@ -434,8 +443,9 @@ def add_contribution():
         member_id = request.form['member_id']
         amount = float(request.form['amount'])
         contribution_type = request.form['type']
-        c.execute("INSERT INTO contributions (member_id, amount, type) VALUES (?, ?, ?)",
-                  (member_id, amount, contribution_type))
+         date = request.form['date']
+        c.execute("INSERT INTO contributions (member_id, amount, type, date) VALUES (?, ?, ?)",
+                  (member_id, amount, contribution_type, date))
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -460,9 +470,10 @@ def add_loan():
         principal = float(request.form['principal'])
         interest_rate = float(request.form['interest_rate'])
         repayment_period = int(request.form['repayment_period'])
-        c.execute('''INSERT INTO loans (member_id, loan_type, principal, interest_rate, repayment_period)
+        date = request.form['date']
+        c.execute('''INSERT INTO loans (member_id, loan_type, principal, interest_rate, repayment_period, date)
                      VALUES (?, ?, ?, ?, ?)''',
-                  (member_id, loan_type, principal, interest_rate, repayment_period))
+                  (member_id, loan_type, principal, interest_rate, repayment_period, date))
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -485,7 +496,8 @@ def repay_loan():
     if request.method == 'POST':
         loan_id = request.form['loan_id']
         amount_paid = float(request.form['amount_paid'])
-        c.execute("INSERT INTO loan_repayments (loan_id, amount_paid) VALUES (?, ?)", (loan_id, amount_paid))
+        date = request.form['date']
+        c.execute("INSERT INTO loan_repayments (loan_id, amount_paid) VALUES (?, ?)", (loan_id, amount_paid, date))
         conn.commit()
         conn.close()
         return redirect(url_for('dashboard'))
@@ -509,6 +521,7 @@ def withdraw_loan():
         loan_id = request.form['loan_id']
         amount = float(request.form['amount'])
         disbursed_date = request.form['disbursed_date']
+        
         c.execute("INSERT INTO withdrawals (loan_id, amount, disbursed_date) VALUES (?, ?, ?)",
                   (loan_id, amount, disbursed_date))
         conn.commit()
