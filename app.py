@@ -332,18 +332,28 @@ def member_summary(member_id):
                            selected_member=member_id)
 
 
-@app.route('/delete_loan/<int:loan_id>', methods=['POST'])
-def delete_loan(loan_id):
+@app.route('/delete/<string:item_type>/<int:item_id>', methods=['POST'])
+def delete_item(item_type, item_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
 
     conn = get_connection()
     c = conn.cursor()
-    # With ON DELETE CASCADE, deleting the loan will delete withdrawals & repayments automatically
-    c.execute("DELETE FROM loans WHERE id = ?", (loan_id,))
+
+    if item_type == "loan":
+        # With ON DELETE CASCADE, deleting the loan removes related withdrawals & repayments
+        c.execute("DELETE FROM loans WHERE id = ?", (item_id,))
+        flash("Loan deleted successfully.")
+    
+    elif item_type == "contribution":
+        c.execute("DELETE FROM contributions WHERE id = ?", (item_id,))
+        flash("Contribution deleted successfully.")
+
+    else:
+        flash("Invalid delete request.")
+
     conn.commit()
     conn.close()
-    flash("Loan deleted successfully.")
     return redirect(url_for('dashboard'))
 
 
