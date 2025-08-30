@@ -341,13 +341,23 @@ def delete_item(item_type, item_id):
     c = conn.cursor()
 
     if item_type == "loan":
-        # With ON DELETE CASCADE, deleting the loan removes related withdrawals & repayments
         c.execute("DELETE FROM loans WHERE id = ?", (item_id,))
         flash("Loan deleted successfully.")
     
     elif item_type == "contribution":
+        # Before deleting, get member_id to redirect properly
+        c.execute("SELECT member_id FROM contributions WHERE id = ?", (item_id,))
+        member = c.fetchone()
+        member_id = member[0] if member else None
+
         c.execute("DELETE FROM contributions WHERE id = ?", (item_id,))
         flash("Contribution deleted successfully.")
+
+        conn.commit()
+        conn.close()
+
+        if member_id:
+            return redirect(url_for('member_report', member_id=member_id))
 
     else:
         flash("Invalid delete request.")
@@ -355,7 +365,6 @@ def delete_item(item_type, item_id):
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard'))
-
 
 # ----------------- CRUD ROUTES -----------------
 
