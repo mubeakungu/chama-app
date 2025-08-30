@@ -7,6 +7,38 @@
     <div class="card-body">
         <p><strong>Total Contributions:</strong> KES {{ total_contributions }}</p>
 
+        <!-- Contributions Section -->
+        <div class="card mb-3">
+            <div class="card-header bg-light fw-bold">Contributions</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Amount (KES)</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in contributions %}
+                        <tr>
+                            <td>{{ c['amount'] }}</td>
+                            <td>{{ c['date'] }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_contribution', contribution_id=c['id'], member_id=member_id) }}" onsubmit="return confirm('Are you sure you want to delete this contribution?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3">No contributions found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Loans Section -->
         {% for report in reports %}
         <div class="card mb-3">
             <div class="card-header bg-light fw-bold">
@@ -22,7 +54,10 @@
                 <p><strong>Balance:</strong> KES {{ report.balance }}</p>
             </div>
         </div>
+        {% else %}
+        <div class="alert alert-info">No loans found for this member.</div>
         {% endfor %}
     </div>
 </div>
 {% endblock %}
+
