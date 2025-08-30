@@ -332,41 +332,56 @@ def member_summary(member_id):
                            selected_member=member_id)
 
 
-@app.route('/delete/<string:item_type>/<int:item_id>', methods=['POST'])
-def delete_item(item_type, item_id):
+@app.route('/delete_loan', methods=['POST'])
+def delete_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
+
+    loan_id = request.form.get('loan_id', type=int)
+
+    if not loan_id:
+        flash("Invalid delete request.")
+        return redirect(url_for('dashboard'))
 
     conn = get_connection()
     c = conn.cursor()
 
-    if item_type == "loan":
-        c.execute("DELETE FROM loans WHERE id = ?", (item_id,))
-        flash("Loan deleted successfully.")
-    
-    elif item_type == "contribution":
-        # Before deleting, get member_id to redirect properly
-        c.execute("SELECT member_id FROM contributions WHERE id = ?", (item_id,))
-        member = c.fetchone()
-        member_id = member[0] if member else None
-
-        c.execute("DELETE FROM contributions WHERE id = ?", (item_id,))
-        flash("Contribution deleted successfully.")
-
+    try:
+        c.execute("DELETE FROM loans WHERE id = ?", (loan_id,))
         conn.commit()
+        flash("Loan deleted successfully.")
+    except Exception as e:
+        conn.rollback()
+        flash(f"An error occurred: {e}")
+    finally:
         conn.close()
 
-        if member_id:
-            return redirect(url_for('member_report', member_id=member_id))
+    # Redirect to a relevant page, e.g., the dashboard or a loan report page.
+    return redirect(url_for('dashboard'))
+# ----------------- CRUD ROUTES -----------------
+@app.route('/delete_contribution', methods=['POST'])
+def delete_contribution():
+    if not session.get('admin'):
+        return redirect(url_for('login'))
 
-    else:
+    contribution_id = request.form.get('contribution_id', type=int)
+    member_id = request.form.get('member_id', type=int)
+
+    if not contribution_id or not member_id:
         flash("Invalid delete request.")
+        return redirect(url_for('dashboard'))
+
+    conn = get_connection()
+    c = conn.cursor()
+
+    c.execute("DELETE FROM contributions WHERE id = ?", (contribution_id,))
+    flash("Contribution deleted successfully.")
 
     conn.commit()
     conn.close()
-    return redirect(url_for('dashboard'))
 
-# ----------------- CRUD ROUTES -----------------
+    return redirect(url_for('member_report', member_id=member_id))
+
 
 @app.route('/add_member', methods=['GET', 'POST'])
 def add_member():
