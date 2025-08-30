@@ -24,20 +24,34 @@
     <div class="card shadow mb-3">
         <div class="card-header fw-bold">Contributions</div>
         <div class="card-body">
-            <ul>
-                {% for c in contributions %}
-                <li class="d-flex justify-content-between align-items-center">
-                    <span>Ksh {{ c['amount'] }} on {{ c['date'] }}</span>
-                    <form method="POST" action="/delete_contribution" class="d-inline">
-                        <input type="hidden" name="contribution_id" value="{{ c['id'] }}">
-                        <input type="hidden" name="member_id" value="{{ selected_member['id'] }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
-                </li>
-                {% else %}
-                <li>No contributions found.</li>
-                {% endfor %}
-            </ul>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contributions %}
+                    <tr>
+                        <td>Ksh {{ c['amount'] }}</td>
+                        <td>{{ c['date'] }}</td>
+                        <td>{{ c['status'] }}</td>
+                        <td>
+                            <form method="POST" action="/delete_contribution" class="d-inline">
+                                <input type="hidden" name="contribution_id" value="{{ c['id'] }}">
+                                <input type="hidden" name="member_id" value="{{ selected_member['id'] }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No contributions found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -52,6 +66,7 @@
                         <th>Interest</th>
                         <th>Total Payable</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,9 +77,16 @@
                         <td>{{ loan['interest'] }}</td>
                         <td>{{ loan['total_payable'] }}</td>
                         <td>{{ loan['status'] }}</td>
+                        <td>
+                            <form method="POST" action="/delete_loan" class="d-inline">
+                                <input type="hidden" name="loan_id" value="{{ loan['id'] }}">
+                                <input type="hidden" name="member_id" value="{{ selected_member['id'] }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="5">No loans found.</td></tr>
+                    <tr><td colspan="6">No loans found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
