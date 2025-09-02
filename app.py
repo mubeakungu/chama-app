@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.secret_key = 'supersecret'
 
 # --- Database Config ---
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")  # set in Render
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("postgresql://chama_db_xq7q_user:HB5iq1bpehxfinPeGl7UaRFcRoqIIS98@dpg-d2qicln5r7bs73anuuv0-a/chama_db_xq7q")  # set in Render
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
