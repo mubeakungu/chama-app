@@ -43,7 +43,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -263,6 +263,18 @@ def delete_loan(loan_id):
     return redirect(url_for('dashboard'))
 
 
+# Added this route to fix the BuildError from the traceback
+@app.route('/repay_loan')
+def repay_loan():
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+    
+    # Since the loan details page already handles the repayment logic,
+    # we can redirect the user to a page to view and manage their loans.
+    # You might want to create a new, dedicated repayment page in the future.
+    return redirect(url_for('dashboard'))
+
+
 @app.route('/loan_details/<int:loan_id>', methods=['GET', 'POST'])
 def loan_details(loan_id):
     if not session.get('admin'):
@@ -337,6 +349,5 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
-    
 
 
