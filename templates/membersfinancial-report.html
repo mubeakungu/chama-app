@@ -2,23 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Chama Admin Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chama Financial Health Report</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- Tailwind CSS and Chart.js from the Financial Report -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutrals -->
-    <!-- Application Structure Plan: The SPA is designed as a top-down dashboard. It starts with high-level Key Performance Indicators (KPIs) for an immediate overview (Total Members, Contributions, Loans). Below, a two-column layout presents visualizations for group-wide trends (Contributions by Member/Type, Loans by Member). The primary interaction is a dropdown to select a member, which dynamically filters a detailed table of all loans and reveals a dedicated section with that member's specific financial summary. This structure was chosen to guide the user from a general overview to specific, actionable insights, making complex data easily digestible and explorable without navigating away from the main view. -->
-    <!-- Visualization & Content Choices: 
-    - KPIs: Goal=Inform -> Method=Styled HTML cards -> Interaction=None. Justification: Quick, scannable summary of the group's health.
-    - Contributions by Member: Goal=Compare -> Method=Bar Chart (Chart.js) -> Interaction=Tooltips, Highlight on filter. Justification: Best for comparing totals across individuals.
-    - Contribution Mix: Goal=Organize -> Method=Donut Chart (Chart.js) -> Interaction=Tooltips. Justification: Clearly shows the proportion of each contribution type.
-    - All Loans List: Goal=Organize/Inform -> Method=HTML Table -> Interaction=Filters on member selection. Justification: Provides detailed, sortable data for all outstanding loans.
-    - Member-Specific Drilldown: Goal=Inform/Analyze -> Method=Hidden HTML section with tables -> Interaction=Appears on filter selection. Justification: Provides a focused view without leaving the page.
-    -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -45,27 +42,50 @@
             max-height: 500px;
         }
         .table-container {
-             background-color: #FFFFFF;
+            background-color: #FFFFFF;
             border-radius: 0.75rem;
             padding: 1.5rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
     </style>
 </head>
-<body class="text-gray-800">
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">Chama Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-    <div class="container mx-auto p-4 md:p-8">
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-user-plus"></i> Add Member</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-hand-holding-usd"></i> Contribution</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-coins"></i> Add Loan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-money-bill-wave"></i> Repay Loan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-arrow-down"></i> Withdraw Loan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-users-cog"></i> Manage Members</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
+    <!-- Page Content -->
+    <div class="container mb-5 text-gray-800">
+        <!-- Main content from the financial dashboard -->
         <header class="mb-8 text-center">
             <h1 class="text-4xl font-bold text-gray-900">Chama Financial Dashboard</h1>
             <p class="text-lg text-gray-600 mt-2">An interactive overview of your group's financial activity.</p>
         </header>
         
         <div class="bg-white rounded-lg shadow-md p-4 mb-8">
-             <label for="memberFilter" class="block text-sm font-medium text-gray-700 mb-2">Filter by Member</label>
-             <select id="memberFilter" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+            <label for="memberFilter" class="block text-sm font-medium text-gray-700 mb-2">Filter by Member</label>
+            <select id="memberFilter" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
                 <option value="all">All Members</option>
-             </select>
+            </select>
         </div>
 
         <section id="kpiSection" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -90,7 +110,7 @@
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="chart-container">
                 <h3 class="text-xl font-semibold mb-4 text-center">Contributions by Member</h3>
-                 <canvas id="contributionsByMemberChart"></canvas>
+                <canvas id="contributionsByMemberChart"></canvas>
             </div>
             <div class="chart-container">
                 <h3 class="text-xl font-semibold mb-4 text-center">Contribution Types</h3>
@@ -120,8 +140,17 @@
         </section>
     </div>
 
+    <!-- Footer -->
+    <footer class="text-center mt-5 text-muted small">
+        <p>© 2025 Chama Admin System. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Replace this with your actual data fetched from a backend
             const mockData = {
                 members: [],
                 contributions: [],
@@ -130,7 +159,6 @@
             };
 
             const memberFilter = document.getElementById('memberFilter');
-            
             const charts = {};
 
             function formatCurrency(amount) {
