@@ -43,13 +43,14 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
     repayment_period = db.Column(db.Integer, nullable=False)
     issue_date = db.Column(db.DateTime, default=datetime.utcnow)
     repayments = db.relationship("LoanRepayment", backref="loan", cascade="all, delete")
+    withdrawals = db.relationship("Withdrawal", backref="loan", cascade="all, delete")
 
 
 class Withdrawal(db.Model):
@@ -335,6 +336,7 @@ def logout():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=True)
     app.run(host="0.0.0.0", port=port, debug=True)
 
 
