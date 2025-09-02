@@ -297,18 +297,52 @@ def delete_loan(loan_id):
     return redirect(url_for('dashboard'))
 
 
-@app.route('/repay_loan')
+# This route now has a form for loan repayment
+@app.route('/repay_loan', methods=['GET', 'POST'])
 def repay_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
-    return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        loan_id = request.form['loan_id']
+        amount_paid = request.form['amount_paid']
+        
+        try:
+            new_repayment = LoanRepayment(loan_id=loan_id, amount_paid=amount_paid)
+            db.session.add(new_repayment)
+            db.session.commit()
+            flash('Loan repayment recorded successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'An error occurred: {e}', 'danger')
+        return redirect(url_for('repay_loan'))
+    
+    loans = Loan.query.all()
+    return render_template('repay_loan.html', loans=loans)
 
 
-@app.route('/withdraw_loan')
+# This route now has a form for loan withdrawal
+@app.route('/withdraw_loan', methods=['GET', 'POST'])
 def withdraw_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
-    return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        loan_id = request.form['loan_id']
+        amount = request.form['amount']
+
+        try:
+            new_withdrawal = Withdrawal(loan_id=loan_id, amount=amount)
+            db.session.add(new_withdrawal)
+            db.session.commit()
+            flash('Loan withdrawal recorded successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'An error occurred: {e}', 'danger')
+        return redirect(url_for('withdraw_loan'))
+    
+    loans = Loan.query.all()
+    return render_template('withdraw_loan.html', loans=loans)
 
 
 @app.route('/loan_details/<int:loan_id>', methods=['GET', 'POST'])
@@ -385,4 +419,3 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
