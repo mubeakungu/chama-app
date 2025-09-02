@@ -263,8 +263,9 @@ def delete_member(member_id):
     return redirect(url_for('dashboard'))
 
 
-@app.route('/delete_contribution/<int:contribution_id>')
-def delete_contribution(contribution_id):
+# Updated route to delete a contribution and redirect back to the member summary page
+@app.route('/delete_contribution/<int:contribution_id>/<int:member_id>')
+def delete_contribution(contribution_id, member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
         
@@ -277,7 +278,7 @@ def delete_contribution(contribution_id):
         db.session.rollback()
         flash(f'An error occurred: {e}', 'danger')
         
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('member_summary', member_id=member_id))
 
 
 @app.route('/delete_loan/<int:loan_id>')
