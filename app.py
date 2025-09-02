@@ -43,7 +43,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE")) # CORRECTED: Changed from loan.id to member.id
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -212,6 +212,40 @@ def add_loan():
     return render_template('add_loan.html', members=members)
 
 
+# New route for managing members
+@app.route('/manage_member')
+def manage_member():
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+    members = Member.query.all()
+    return render_template('manage_member.html', members=members)
+
+
+# New route for editing a member
+@app.route('/edit_member/<int:member_id>', methods=['GET', 'POST'])
+def edit_member(member_id):
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+    
+    member = Member.query.get_or_404(member_id)
+    
+    if request.method == 'POST':
+        member.name = request.form['name']
+        member.phone = request.form['phone']
+        member.email = request.form['email']
+        
+        try:
+            db.session.commit()
+            flash('Member updated successfully!', 'success')
+            return redirect(url_for('manage_member'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'An error occurred: {e}', 'danger')
+            return redirect(url_for('edit_member', member_id=member.id))
+            
+    return render_template('edit_member.html', member=member)
+
+
 @app.route('/delete_member/<int:member_id>')
 def delete_member(member_id):
     if not session.get('admin'):
@@ -263,15 +297,17 @@ def delete_loan(loan_id):
     return redirect(url_for('dashboard'))
 
 
-# Added this route to fix the BuildError from the traceback
 @app.route('/repay_loan')
 def repay_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
-    
-    # Since the loan details page already handles the repayment logic,
-    # we can redirect the user to a page to view and manage their loans.
-    # You might want to create a new, dedicated repayment page in the future.
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/withdraw_loan')
+def withdraw_loan():
+    if not session.get('admin'):
+        return redirect(url_for('login'))
     return redirect(url_for('dashboard'))
 
 
