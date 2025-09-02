@@ -409,6 +409,30 @@ def generate_report():
     return send_file(pdf_file, as_attachment=True, download_name="chama_report.pdf", mimetype='application/pdf')
 
 
+# Route to show a summary for a specific member
+@app.route('/member_summary/<int:member_id>')
+def member_summary(member_id):
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+
+    member = Member.query.get_or_404(member_id)
+    contributions = Contribution.query.filter_by(member_id=member.id).order_by(Contribution.date.desc()).all()
+    loans = Loan.query.filter_by(member_id=member.id).order_by(Loan.issue_date.desc()).all()
+
+    total_contributions = db.session.query(func.sum(Contribution.amount)).filter_by(member_id=member.id).scalar() or 0
+    
+    # Calculate loan balances
+    for loan in loans:
+        total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
+        loan.remaining_balance = loan.principal - total_repaid
+
+    return render_template('member_summary.html',
+                           member=member,
+                           contributions=contributions,
+                           loans=loans,
+                           total_contributions=total_contributions)
+
+
 @app.route('/logout')
 def logout():
     session.clear()
