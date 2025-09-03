@@ -98,12 +98,11 @@ def dashboard():
         return redirect(url_for('login'))
 
     members = Member.query.all()
-      contributions = Contribution.query.join(Member).add_columns(
-           Contribution.id, Contribution.member_id,
-           Member.name.label("member_name"), Contribution.type,
-           Contribution.amount, Contribution.date
-     ).order_by(Contribution.date.desc()).all()
-
+    contributions = Contribution.query.join(Member).add_columns(
+        Contribution.id, Contribution.member_id,
+        Member.name.label("member_name"), Contribution.type,
+        Contribution.amount, Contribution.date
+    ).order_by(Contribution.date.desc()).all()
 
     loans = Loan.query.join(Member).add_columns(
         Loan.id, Member.name.label("name"), Loan.principal,
@@ -117,6 +116,15 @@ def dashboard():
         Contribution).group_by(Member.id).all()
     chart_labels = [m[0] for m in member_sums]
     chart_data = [m[1] or 0 for m in member_sums]
+
+    return render_template("dashboard.html",
+                           members=members,
+                           contributions=contributions,
+                           loans=loans,
+                           chart_labels=chart_labels,
+                           chart_data=chart_data,
+                           total_contributions=total_contributions)
+
 
     return render_template("dashboard.html",
                            members=members,
