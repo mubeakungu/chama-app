@@ -1,51 +1,206 @@
 {% extends "base.html" %}
+
+{% block title %}Dashboard - Chama Management{% endblock %}
+
 {% block content %}
-<div class="card shadow">
-    <div class="card-header bg-primary text-white fw-bold">Manage Members</div>
-    <div class="card-body">
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>Member ID</th>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in members %}
-                <tr>
-                    <td>{{ member.id }}</td>
-                    <td>{{ member.name }}</td>
-                    <td>
-                        {% if member.status == "accepted" %}
-                            <span class="badge bg-success">Accepted</span>
-                        {% elif member.status == "revoked" %}
-                            <span class="badge bg-danger">Revoked</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Pending</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <form method="POST" style="display:inline;">
-                            <input type="hidden" name="member_id" value="{{ member.id }}">
-                            <button type="submit" name="action" value="accept" class="btn btn-success btn-sm">Accept</button>
-                        </form>
-                        <form method="POST" style="display:inline;">
-                            <input type="hidden" name="member_id" value="{{ member.id }}">
-                            <button type="submit" name="action" value="revoke" class="btn btn-warning btn-sm">Revoke</button>
-                        </form>
-                        <form method="POST" style="display:inline;" 
-                              onsubmit="return confirm('Are you sure you want to remove this member? This will also delete all their loans, contributions, repayments, and withdrawals.');">
-                            <input type="hidden" name="member_id" value="{{ member.id }}">
-                            <button type="submit" name="action" value="remove" class="btn btn-danger btn-sm">Remove</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+<div class="container mt-4"> <h1 class="text-center mb-4">Chama Dashboard</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3 shadow">
+            <div class="card-header">Total Contributions</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ "%.2f"|format(total_contributions) }} KES</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-secondary text-white fw-bold">Contributions Summary</div>
+            <div class="card-body">
+                <canvas id="contributionsChart"></canvas>
+            </div>
+        </div>
     </div>
 </div>
-{% endblock %}
 
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+                Manage Members
+                <a href="{{ url_for('add_member') }}" class="btn btn-light btn-sm">Add New Member</a>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Member ID</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr>
+                            <td>{{ member.id }}</td>
+                            <td>{{ member.name }}</td>
+                            <td>{{ member.phone }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ member.status }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('delete_member', member_id=member.id) }}" class="btn btn-danger btn-sm">Remove</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+                Recent Contributions
+                <a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm">Add New Contribution</a>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Member Name</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contribution in contributions %}
+                        <tr>
+                            <td>{{ contribution.id }}</td>
+                            <td>{{ contribution.member_name }}</td>
+                            <td>{{ contribution.type }}</td>
+                            <td>{{ "%.2f"|format(contribution.amount) }} KES</td>
+                            <td>{{ contribution.date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('delete_contribution', contribution_id=contribution.id) }}" class="btn btn-danger btn-sm">Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white fw-bold d-flex justify-content-between align-items-center">
+                Manage Loans
+                <a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm">Add New Loan</a>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Member Name</th>
+                            <th>Principal</th>
+                            <th>Interest Rate</th>
+                            <th>Period (months)</th>
+                            <th>Issue Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in loans %}
+                        <tr>
+                            <td>{{ loan.id }}</td>
+                            <td>{{ loan.name }}</td>
+                            <td>{{ "%.2f"|format(loan.principal) }} KES</td>
+                            <td>{{ loan.interest_rate }}%</td>
+                            <td>{{ loan.repayment_period }}</td>
+                            <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('loan_details', loan_id=loan.id) }}" class="btn btn-primary btn-sm">Details</a>
+                                <a href="{{ url_for('delete_loan', loan_id=loan.id) }}" class="btn btn-danger btn-sm">Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
+                Generate Report
+                <a href="{{ url_for('generate_report') }}" class="btn btn-light btn-sm">Download Report (PDF)</a>
+            </div>
+            <div class="card-body">
+                <p>Click the button above to generate a PDF report of all Chama data.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script src="https://www.google.com/search?q=https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById('contributionsChart').getContext('2d');
+const contributionsChart = new Chart(ctx, {
+type: 'bar',
+data: {
+labels: {{ chart_labels|tojson }},
+datasets: [{
+label: 'Total Contributions',
+data: {{ chart_data|tojson }},
+backgroundColor: 'rgba(75, 192, 192, 0.6)',
+borderColor: 'rgba(75, 192, 192, 1)',
+borderWidth: 1
+}]
+},
+options: {
+responsive: true,
+scales: {
+y: {
+beginAtZero: true,
+title: {
+display: true,
+text: 'Amount (KES)'
+}
+},
+x: {
+title: {
+display: true,
+text: 'Member Name'
+}
+}
+}
+}
+});
+</script>
+
+{% endblock %}
