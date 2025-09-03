@@ -98,10 +98,12 @@ def dashboard():
         return redirect(url_for('login'))
 
     members = Member.query.all()
-    contributions = Contribution.query.join(Member).add_columns(
-        Contribution.id, Member.name.label("member_name"), Contribution.type,
-        Contribution.amount, Contribution.date
-    ).order_by(Contribution.date.desc()).all()
+      contributions = Contribution.query.join(Member).add_columns(
+           Contribution.id, Contribution.member_id,
+           Member.name.label("member_name"), Contribution.type,
+           Contribution.amount, Contribution.date
+     ).order_by(Contribution.date.desc()).all()
+
 
     loans = Loan.query.join(Member).add_columns(
         Loan.id, Member.name.label("name"), Loan.principal,
