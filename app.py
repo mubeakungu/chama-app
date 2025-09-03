@@ -1,10 +1,10 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, make_response, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
 from datetime import datetime
 import pandas as pd
 from xhtml2pdf import pisa
-import os
 
 app = Flask(__name__)
 app.secret_key = 'supersecret'
@@ -27,6 +27,7 @@ class Member(db.Model):
     name = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(50))
     email = db.Column(db.String(100))
+    id_number = db.Column(db.String(50))
     join_date = db.Column(db.Date, default=datetime.utcnow)
     status = db.Column(db.String(50), default="pending")
     contributions = db.relationship("Contribution", backref="member", cascade="all, delete")
@@ -212,7 +213,7 @@ def add_loan():
             interest_rate = request.form['interest_rate']
             repayment_period = request.form['repayment_period']
             loan_type = request.form['loan_type']
-            issue_date_str = request.form.get('issue_date') # Use .get() to avoid KeyError
+            issue_date_str = request.form.get('issue_date')
 
             # Convert date string to datetime object, or use current time as fallback
             if issue_date_str:
@@ -312,6 +313,21 @@ def edit_member(member_id):
         member.name = request.form['name']
         member.phone = request.form['phone']
         member.email = request.form['email']
+        
+        # New fields from the form
+        id_number_str = request.form.get('id_number')
+        join_date_str = request.form.get('join_date')
+
+        # Update member fields if they exist in the form
+        if id_number_str:
+            member.id_number = id_number_str
+        
+        if join_date_str:
+            try:
+                member.join_date = datetime.strptime(join_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("Invalid date format. Please use YYYY-MM-DD.", 'danger')
+                return redirect(url_for('edit_member', member_id=member.id))
         
         try:
             db.session.commit()
