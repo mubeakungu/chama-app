@@ -1,671 +1,264 @@
 {% extends "base.html" %}
 
-
-
 {% block title %}Dashboard - Chama Management{% endblock %}
 
-
-
 {% block content %}
-
-<div class="container-fluid mt-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <h2>Chama Dashboard</h2>
-
-        <div>
-
-            <a href="{{ url_for('add_member') }}" class="btn btn-primary">Add Member</a>
-
-            <a href="{{ url_for('add_contribution') }}" class="btn btn-info">Add Contribution</a>
-
-            <a href="{{ url_for('add_loan') }}" class="btn btn-warning">Add Loan</a>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- Summary Cards -->
-
-    <div class="row">
-
-        <div class="col-md-3 mb-4">
-
-            <div class="card bg-success text-white shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <h5 class="card-title">Total Contributions</h5>
-
-                    <p class="card-text fs-3">KES {{ "%.2f"|format(total_contributions) }}</p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3 mb-4">
-
-            <div class="card bg-danger text-white shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <h5 class="card-title">Total Loans Disbursed</h5>
-
-                    <p class="card-text fs-3">KES {{ "%.2f"|format(total_loans) }}</p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3 mb-4">
-
-            <div class="card bg-primary text-white shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <h5 class="card-title">Total Repayments</h5>
-
-                    <p class="card-text fs-3">KES {{ "%.2f"|format(total_repayments) }}</p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3 mb-4">
-
-            <div class="card bg-secondary text-white shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <h5 class="card-title">Total Interest Generated</h5>
-
-                    <p class="card-text fs-3">KES {{ "%.2f"|format(total_interests) }}</p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- Charts -->
-
-    <div class="row mt-4">
-
-        <div class="col-md-6">
-
-            <div class="card shadow-sm h-100">
-
-                <div class="card-header bg-light">
-
-                    Contribution Overview
-
-                </div>
-
-                <div class="card-body">
-
-                    <canvas id="contributionChart"></canvas>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-6">
-
-            <div class="card shadow-sm h-100">
-
-                <div class="card-header bg-light">
-
-                    Loan Status Overview
-
-                </div>
-
-                <div class="card-body">
-
-                    <canvas id="loanStatusChart"></canvas>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- Loan Tables -->
-
-    <div class="row mt-4">
-
-        <div class="col-12">
-
-            <h3>Loan Status</h3>
-
-            <div class="row">
-
-                <div class="col-md-6">
-
-                    <h4 class="mt-4">Ongoing Loans</h4>
-
-                    <div class="table-responsive">
-
-                        <table class="table table-striped table-bordered table-hover">
-
-                            <thead>
-
-                                <tr>
-
-                                    <th>Member</th>
-
-                                    <th>Loan Amount</th>
-
-                                    <th>Repaid</th>
-
-                                    <th>Status</th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                {% for d in defaulter_loans %}
-
-                                <tr>
-
-                                    <td>{{ d[0] }}</td>
-
-                                    <td>KES {{ "%.2f"|format(d[1]) }}</td>
-
-                                    <td>KES {{ "%.2f"|format(d[2]) }}</td>
-
-                                    <td><span class="badge bg-warning text-dark">Ongoing</span></td>
-
-                                </tr>
-
-                                {% endfor %}
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
-
-                <div class="col-md-6">
-
-                    <h4 class="mt-4">Completed Loans</h4>
-
-                    <div class="table-responsive">
-
-                        <table class="table table-striped table-bordered table-hover">
-
-                            <thead>
-
-                                <tr>
-
-                                    <th>Member</th>
-
-                                    <th>Loan Amount</th>
-
-                                    <th>Repaid</th>
-
-                                    <th>Status</th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                {% for c in completed_loans %}
-
-                                <tr>
-
-                                    <td>{{ c[0] }}</td>
-
-                                    <td>KES {{ "%.2f"|format(c[1]) }}</td>
-
-                                    <td>KES {{ "%.2f"|format(c[2]) }}</td>
-
-                                    <td><span class="badge bg-success">Completed</span></td>
-
-                                </tr>
-
-                                {% endfor %}
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-{% endblock %} youve completly changed my dashboard format i didnt want that i wanted only to add completed loan fields and ongoing loan fields on the below dashboard template {% extends "base.html" %}
-
-
-
-{% block title %}Dashboard - Chama Management{% endblock %}
-
-
-
-{% block content %}
-
-
 
 <div class="container mt-4">
 
-
-
-    <div class="card shadow mb-4">
-
-        <div class="card-header bg-primary text-white fw-bold">Filter by Member</div>
-
-        <div class="card-body">
-
-            <form method="get" action="">
-
-                <div class="row">
-
-                    <div class="col-md-8">
-
-                        <select class="form-select" onchange="location = this.value;">
-
-                            <option selected disabled>-- Select Member --</option>
-
-                            {% for member in members %}
-
-                                <option value="{{ url_for('member_summary', member_id=member.id) }}"
-
-                                        {% if selected_member == member.id %}selected{% endif %}>
-
-                                    {{ member.name }}
-
-                                </option>
-
-                            {% endfor %}
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-            </form>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="row mb-4 text-center">
-
-        <div class="col-md-3">
-
-            <div class="card shadow">
-
-                <div class="card-header bg-success text-white fw-bold">Total Contributions</div>
-
-                <div class="card-body fs-5">Ksh {{ total_contributions | round(2) }}</div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="card shadow">
-
-                <div class="card-header bg-warning text-dark fw-bold">Total Loans Applied</div>
-
-                <div class="card-body fs-5">Ksh {{ total_loans | round(2) }}</div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="card shadow">
-
-                <div class="card-header bg-info text-white fw-bold">Total Interests</div>
-
-                <div class="card-body fs-5">Ksh {{ total_interests | round(2) }}</div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="card shadow">
-
-                <div class="card-header bg-danger text-white fw-bold">Loan Balance</div>
-
-                <div class="card-body fs-5">Ksh {{ (total_loans - (total_repayments if total_repayments else 0)) | round(2) }}</div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="card shadow mb-4">
-
-        <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
-
-            Manage Members
-
-            <a href="{{ url_for('add_member') }}" class="btn btn-light btn-sm">Add Member</a>
-
-        </div>
-
-        <div class="card-body table-responsive">
-
-            <table class="table table-bordered table-striped">
-
-                <thead class="table-dark">
-
-                    <tr>
-
-                        <th>ID</th>
-
-                        <th>Name</th>
-
-                        <th>Phone</th>
-
-                        <th>Status</th>
-
-                        <th>Action</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {% for member in members %}
-
-                        <tr>
-
-                            <td>{{ member.id }}</td>
-
-                            <td>{{ member.name }}</td>
-
-                            <td>{{ member.phone }}</td>
-
-                            <td>
-
-                                <span class="badge bg-secondary">{{ member.status }}</span>
-
-                            </td>
-
-                            <td>
-
-                                <form method="POST" action="{{ url_for('delete_member', member_id=member.id) }}">
-
-                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-
-                                </form>
-
-                            </td>
-
-                        </tr>
-
-                    {% else %}
-
-                        <tr><td colspan="5" class="text-center text-muted">No members yet</td></tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="card shadow mb-4">
-
-        <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
-
-            Contributions Summary
-
-            <a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm">Add Contribution</a>
-
-        </div>
-
-        <div class="card-body table-responsive">
-
-            <table class="table table-striped table-hover">
-
-                <thead class="table-dark">
-
-                    <tr>
-
-                        <th>Member</th>
-
-                        <th>Type</th>
-
-                        <th>Amount</th>
-
-                        <th>Date</th>
-
-                        <th>Action</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {% for c in contributions %}
-
-                        <tr>
-
-                            <td>{{ c.member_name }}</td>
-
-                            <td>{{ c.type }}</td>
-
-                            <td>Ksh {{ c.amount }}</td>
-
-                            <td>{{ c.date.strftime('%Y-%m-%d') }}</td>
-
-                            <td>
-
-                                <form method="POST" action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=c.member_id) }}">
-
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-
-                                </form>
-
-                            </td>
-
-                        </tr>
-
-                    {% else %}
-
-                        <tr><td colspan="5" class="text-center text-muted">No contributions yet</td></tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="card shadow mb-4">
-
-        <div class="card-header bg-warning fw-bold d-flex justify-content-between align-items-center">
-
-            Loan Summary
-
-            <a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm">Add Loan</a>
-
-        </div>
-
-        <div class="card-body table-responsive">
-
-            <table class="table table-bordered table-hover">
-
-                <thead class="table-dark">
-
-                    <tr>
-
-                        <th>Member</th>
-
-                        <th>Principal</th>
-
-                        <th>Interest Rate</th>
-
-                        <th>Repayment Period</th>
-
-                        <th>Date Applied</th>
-
-                        <th>Action</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {% for loan in loans %}
-
-                        <tr>
-
-                            <td>{{ loan.name }}</td>
-
-                            <td>Ksh {{ loan.principal | round(2) }}</td>
-
-                            <td>{{ loan.interest_rate | round(2) }}%</td>
-
-                            <td>{{ loan.repayment_period }} months</td>
-
-                            <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
-
-                            <td>
-
-                                <form method="POST" action="{{ url_for('delete_loan', loan_id=loan.id) }}">
-
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-
-                                </form>
-
-                            </td>
-
-                        </tr>
-
-                    {% else %}
-
-                        <tr><td colspan="8" class="text-center text-muted">No loans yet</td></tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="card shadow mb-4">
-
-        <div class="card-header bg-info text-white fw-bold">Contribution Distribution</div>
-
-        <div class="card-body text-center">
-
-            <canvas id="contributionChart" style="max-width: 350px; max-height: 350px;"></canvas>
-
-        </div>
-
-    </div>
-
-
-
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white fw-bold">Filter by Member</div>
+        <div class="card-body">
+            <form method="get" action="">
+                <div class="row">
+                    <div class="col-md-8">
+                        <select class="form-select" onchange="location = this.value;">
+                            <option selected disabled>-- Select Member --</option>
+                            {% for member in members %}
+                                <option value="{{ url_for('member_summary', member_id=member.id) }}"
+                                        {% if selected_member == member.id %}selected{% endif %}>
+                                    {{ member.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4 text-center">
+        <div class="col-md-3">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white fw-bold">Total Contributions</div>
+                <div class="card-body fs-5">Ksh {{ total_contributions | round(2) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark fw-bold">Total Loans Applied</div>
+                <div class="card-body fs-5">Ksh {{ total_loans | round(2) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white fw-bold">Total Interests</div>
+                <div class="card-body fs-5">Ksh {{ total_interests | round(2) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white fw-bold">Loan Balance</div>
+                <div class="card-body fs-5">Ksh {{ (total_loans - (total_repayments if total_repayments else 0)) | round(2) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
+            Manage Members
+            <a href="{{ url_for('add_member') }}" class="btn btn-light btn-sm">Add Member</a>
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                        <tr>
+                            <td>{{ member.id }}</td>
+                            <td>{{ member.name }}</td>
+                            <td>{{ member.phone }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ member.status }}</span>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_member', member_id=member.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-muted">No members yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+            Contributions Summary
+            <a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm">Add Contribution</a>
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Member</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contributions %}
+                        <tr>
+                            <td>{{ c.member_name }}</td>
+                            <td>{{ c.type }}</td>
+                            <td>Ksh {{ c.amount }}</td>
+                            <td>{{ c.date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=c.member_id) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-muted">No contributions yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-warning fw-bold d-flex justify-content-between align-items-center">
+            Loan Summary
+            <a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm">Add Loan</a>
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Member</th>
+                        <th>Principal</th>
+                        <th>Interest Rate</th>
+                        <th>Repayment Period</th>
+                        <th>Date Applied</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                        <tr>
+                            <td>{{ loan.name }}</td>
+                            <td>Ksh {{ loan.principal | round(2) }}</td>
+                            <td>{{ loan.interest_rate | round(2) }}%</td>
+                            <td>{{ loan.repayment_period }} months</td>
+                            <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_loan', loan_id=loan.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" class="text-center text-muted">No loans yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h3 class="mt-4">Loan Status</h3>
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-warning text-white fw-bold">Ongoing Loans</div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Member</th>
+                                <th>Loan Amount</th>
+                                <th>Repaid</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in ongoing_loans %}
+                            <tr>
+                                <td>{{ loan.member_name }}</td>
+                                <td>Ksh {{ loan.principal | round(2) }}</td>
+                                <td>Ksh {{ loan.repaid | round(2) }}</td>
+                                <td>Ksh {{ (loan.principal + loan.interest - loan.repaid) | round(2) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">No ongoing loans</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white fw-bold">Completed Loans</div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Member</th>
+                                <th>Loan Amount</th>
+                                <th>Total Repaid</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in completed_loans %}
+                            <tr>
+                                <td>{{ loan.member_name }}</td>
+                                <td>Ksh {{ loan.principal | round(2) }}</td>
+                                <td>Ksh {{ loan.repaid | round(2) }}</td>
+                                <td><span class="badge bg-success">Completed</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">No completed loans</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-info text-white fw-bold">Contribution Distribution</div>
+        <div class="card-body text-center">
+            <canvas id="contributionChart" style="max-width: 350px; max-height: 350px;"></canvas>
+        </div>
+    </div>
 </div>
 
-
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-
 var ctx = document.getElementById('contributionChart').getContext('2d');
-
 var contributionChart = new Chart(ctx, {
-
-    type: 'pie',
-
-    data: {
-
-        labels: {{ chart_labels|tojson }},
-
-        datasets: [{
-
-            data: {{ chart_data|tojson }},
-
-            backgroundColor: ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336']
-
-        }]
-
-    },
-
-    options: {
-
-        responsive: true,
-
-        plugins: {
-
-            legend: { position: 'bottom' }
-
-        }
-
-    }
-
+    type: 'pie',
+    data: {
+        labels: {{ chart_labels|tojson }},
+        datasets: [{
+            data: {{ chart_data|tojson }},
+            backgroundColor: ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
 });
-
 </script>
-
-
 
 {% endblock %}
