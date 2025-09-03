@@ -26,6 +26,37 @@
         </div>
     </div>
     
+    <!-- Sharing Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-info text-white fw-bold">Share Summary</div>
+        <div class="card-body">
+            {% set member_name = member.name %}
+            {% set total_contribs = "Ksh " + "%.2f"|format(total_contributions) %}
+            
+            {% set loan_summary_list = [] %}
+            {% for loan in loans %}
+                {% set loan_summary_list = loan_summary_list + [
+                    'Loan ' + loop.index|string + ':',
+                    '  Principal: Ksh ' + "%.2f"|format(loan.principal),
+                    '  Remaining: Ksh ' + "%.2f"|format(loan.remaining_balance)
+                ] %}
+            {% endfor %}
+            {% set loan_summary_text = loan_summary_list|join('\n') %}
+
+            {% set share_message = 'Member Summary for ' + member_name + '\n\n' + 'Total Contributions: ' + total_contribs + '\n\n' + 'Loans:\n' + loan_summary_text %}
+
+            <div class="d-grid gap-2 d-md-block">
+                <a href="https://wa.me/?text={{ share_message|urlencode }}" target="_blank" class="btn btn-success me-2">
+                    <i class="bi bi-whatsapp"></i> Share on WhatsApp
+                </a>
+                <a href="mailto:?subject={{ 'Chama Member Summary for ' + member_name|urlencode }}&body={{ share_message|urlencode }}" class="btn btn-primary">
+                    <i class="bi bi-envelope"></i> Share via Email
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- End Sharing Section -->
+
     <div class="card shadow mb-4">
         <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
             Contributions History
@@ -49,7 +80,9 @@
                         <td>{{ c.type }}</td>
                         <td>{{ c.date.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
-                            <a href="{{ url_for('delete_contribution', contribution_id=c.id, member_id=member.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this contribution?');">Delete</a>
+                            <form action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=member.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this contribution?');">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
@@ -89,7 +122,9 @@
                         <td>Ksh {{ "%.2f"|format(loan.remaining_balance) }}</td>
                         <td>
                             <a href="{{ url_for('loan_details', loan_id=loan.id) }}" class="btn btn-info btn-sm">View Details</a>
-                            <a href="{{ url_for('delete_loan', loan_id=loan.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this loan?');">Delete</a>
+                            <form action="{{ url_for('delete_loan', loan_id=loan.id) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this loan?');">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
