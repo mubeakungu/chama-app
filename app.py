@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.secret_key = 'supersecret'
 
 # --- Database Config ---
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///chama.db") # set in Render
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///chama.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -43,8 +43,6 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # CORRECTED: This foreign key was incorrectly pointing to `loan.id`.
-    # It has been changed to point to `member.id` to link loans to members.
     member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
@@ -180,16 +178,22 @@ def add_contribution():
         member_id = request.form['member_id']
         amount = request.form['amount']
         contribution_type = request.form['type']
+        date_str = request.form['date']
         
         try:
-            new_contribution = Contribution(member_id=member_id, amount=amount, type=contribution_type)
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            new_contribution = Contribution(member_id=member_id, amount=amount, type=contribution_type, date=date)
             db.session.add(new_contribution)
             db.session.commit()
             flash('Contribution added successfully!', 'success')
             return redirect(url_for('dashboard'))
+        except (ValueError, KeyError) as e:
+            db.session.rollback()
+            flash(f'An error occurred with the form data: {e}', 'danger')
+            return redirect(url_for('add_contribution'))
         except Exception as e:
             db.session.rollback()
-            flash(f'An error occurred: {e}', 'danger')
+            flash(f'An unexpected error occurred: {e}', 'danger')
             return redirect(url_for('add_contribution'))
     
     members = Member.query.all()
@@ -202,21 +206,20 @@ def add_loan():
         return redirect(url_for('login'))
         
     if request.method == 'POST':
-        member_id = request.form['member_id']
-        principal = request.form['principal']
-        interest_rate = request.form['interest_rate']
-        repayment_period = request.form['repayment_period']
-        loan_type = request.form['loan_type']
-        
-        # --- FIX: Capture the selected date from the form ---
-        issue_date_str = request.form['issue_date']
         try:
-            issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d')
-        except ValueError:
-            flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
-            return redirect(url_for('add_loan'))
+            member_id = request.form['member_id']
+            principal = request.form['principal']
+            interest_rate = request.form['interest_rate']
+            repayment_period = request.form['repayment_period']
+            loan_type = request.form['loan_type']
+            issue_date_str = request.form.get('issue_date') # Use .get() to avoid KeyError
 
-        try:
+            # Convert date string to datetime object, or use current time as fallback
+            if issue_date_str:
+                issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d').date()
+            else:
+                issue_date = datetime.utcnow().date()
+                
             new_loan = Loan(
                 member_id=member_id,
                 principal=principal,
@@ -229,9 +232,13 @@ def add_loan():
             db.session.commit()
             flash('Loan added successfully!', 'success')
             return redirect(url_for('dashboard'))
+        except (ValueError, KeyError) as e:
+            db.session.rollback()
+            flash(f'An error occurred with the form data: {e}', 'danger')
+            return redirect(url_for('add_loan'))
         except Exception as e:
             db.session.rollback()
-            flash(f'An error occurred: {e}', 'danger')
+            flash(f'An unexpected error occurred: {e}', 'danger')
             return redirect(url_for('add_loan'))
 
     members = Member.query.all()
@@ -500,8 +507,8 @@ def member_summary(member_id):
     for loan in loans:
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
         loan.remaining_balance = loan.principal - total_repaid
-        loan.total_repaid = total_repaid # Pass total repaid to the template
-        
+        loan.total_repaid = total_repaid
+
     return render_template('member_summary.html',
                            member=member,
                            contributions=contributions,
