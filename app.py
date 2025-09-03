@@ -43,7 +43,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -111,6 +111,8 @@ def dashboard():
 
     total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
+    total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
+
 
     # Calculate total interests
     total_interests = 0
@@ -134,6 +136,7 @@ def dashboard():
                            chart_data=chart_data,
                            total_contributions=total_contributions,
                            total_loans=total_loans,
+                           total_repayments=total_repayments,
                            total_interests=total_interests)
 
 
@@ -279,8 +282,6 @@ def manage_member():
     )
 
 
-
-
 # New route for editing a member
 @app.route('/edit_member/<int:member_id>', methods=['GET', 'POST'])
 def edit_member(member_id):
@@ -306,7 +307,8 @@ def edit_member(member_id):
     return render_template('edit_member.html', member=member)
 
 
-@app.route('/delete_member/<int:member_id>')
+# Route to handle member deletion - Now accepts POST requests
+@app.route('/delete_member/<int:member_id>', methods=['POST'])
 def delete_member(member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
@@ -323,8 +325,8 @@ def delete_member(member_id):
     return redirect(url_for('dashboard'))
 
 
-# Updated route to delete a contribution and redirect back to the member summary page
-@app.route('/delete_contribution/<int:contribution_id>/<int:member_id>')
+# Route to handle contribution deletion - Now accepts POST requests
+@app.route('/delete_contribution/<int:contribution_id>/<int:member_id>', methods=['POST'])
 def delete_contribution(contribution_id, member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
@@ -341,7 +343,8 @@ def delete_contribution(contribution_id, member_id):
     return redirect(url_for('member_summary', member_id=member_id))
 
 
-@app.route('/delete_loan/<int:loan_id>')
+# Route to handle loan deletion - Now accepts POST requests
+@app.route('/delete_loan/<int:loan_id>', methods=['POST'])
 def delete_loan(loan_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
