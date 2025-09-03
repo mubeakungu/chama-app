@@ -95,6 +95,7 @@
                             <th>Repayment Period</th>
                             <th>Issue Date</th>
                             <th>Remaining Balance</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -106,6 +107,13 @@
                             <td>{{ loan.repayment_period }} months</td>
                             <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
                             <td>Ksh {{ "%.2f"|format(loan.remaining_balance) }}</td>
+                            <td>
+                                {% if loan.remaining_balance == 0 %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Ongoing</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <a href="{{ url_for('loan_details', loan_id=loan.id) }}" class="btn btn-info btn-sm">View Details</a>
                                 <form action="{{ url_for('delete_loan', loan_id=loan.id) }}" method="post" style="display:inline;">
