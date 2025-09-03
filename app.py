@@ -30,12 +30,14 @@ class Member(db.Model):
     id_number = db.Column(db.String(50))
     join_date = db.Column(db.Date, default=datetime.utcnow)
     status = db.Column(db.String(50), default="pending")
+    # 'contributions' and 'loans' are back-references to their respective models
     contributions = db.relationship("Contribution", backref="member", cascade="all, delete")
     loans = db.relationship("Loan", backref="member", cascade="all, delete")
 
 
 class Contribution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    # This foreign key links a contribution to a member
     member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     amount = db.Column(db.Float, nullable=False)
     type = db.Column(db.String(50))
@@ -44,7 +46,8 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
+    # CORRECTED: This foreign key now correctly links a loan to a member
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -71,7 +74,6 @@ class LoanRepayment(db.Model):
 # --- Ensure DB and default admin ---
 with app.app_context():
     # Only run db.create_all() on the first run to create tables.
-    # Do not run db.drop_all() in a production environment as it deletes all data.
     db.create_all()
     if not Admin.query.filter_by(username="admin").first():
         admin = Admin(username="admin", password="pass123")
@@ -116,7 +118,6 @@ def dashboard():
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
     total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
 
-
     # Calculate total interests
     total_interests = 0
     all_loans = Loan.query.all()
@@ -146,17 +147,17 @@ def dashboard():
             defaulter_loans.append((loan.member.name, loan.principal, total_repaid))
 
     return render_template("dashboard.html",
-                           members=members,
-                           contributions=contributions,
-                           loans=loans,
-                           chart_labels=chart_labels,
-                           chart_data=chart_data,
-                           total_contributions=total_contributions,
-                           total_loans=total_loans,
-                           total_repayments=total_repayments,
-                           total_interests=total_interests,
-                           defaulter_loans=defaulter_loans,
-                           completed_loans=completed_loans)
+                            members=members,
+                            contributions=contributions,
+                            loans=loans,
+                            chart_labels=chart_labels,
+                            chart_data=chart_data,
+                            total_contributions=total_contributions,
+                            total_loans=total_loans,
+                            total_repayments=total_repayments,
+                            total_interests=total_interests,
+                            defaulter_loans=defaulter_loans,
+                            completed_loans=completed_loans)
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
@@ -544,10 +545,10 @@ def member_summary(member_id):
         loan.total_repaid = total_repaid
 
     return render_template('member_summary.html',
-                           member=member,
-                           contributions=contributions,
-                           loans=loans,
-                           total_contributions=total_contributions)
+                            member=member,
+                            contributions=contributions,
+                            loans=loans,
+                            total_contributions=total_contributions)
 
 
 @app.route('/logout')
