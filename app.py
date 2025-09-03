@@ -219,11 +219,14 @@ def manage_member():
 
     members = Member.query.all()
 
-    # Totals for dashboard-style cards in manage_member.html
     total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
     total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
     total_withdrawals = db.session.query(func.sum(Withdrawal.amount)).scalar() or 0
+
+    # 🔹 Add these so template doesn’t break
+    chart_labels = [m.name for m in members]
+    chart_data = [sum(c.amount for c in m.contributions) for m in members]
 
     return render_template(
         'manage_member.html',
@@ -231,8 +234,11 @@ def manage_member():
         total_contributions=total_contributions,
         total_loans=total_loans,
         total_repayments=total_repayments,
-        total_withdrawals=total_withdrawals
+        total_withdrawals=total_withdrawals,
+        chart_labels=chart_labels,
+        chart_data=chart_data
     )
+
 
 
 
