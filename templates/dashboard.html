@@ -80,8 +80,7 @@
                                 <span class="badge bg-secondary">{{ member.status }}</span>
                             </td>
                             <td>
-                                <form method="POST" action="{{ url_for('delete_member', member_id=member.id) }}"
-                                      onsubmit="return confirm('Are you sure you want to remove this member?');">
+                                <form method="POST" action="{{ url_for('delete_member', member_id=member.id) }}">
                                     <button type="submit" class="btn btn-sm btn-danger">Remove</button>
                                 </form>
                             </td>
@@ -118,8 +117,7 @@
                             <td>Ksh {{ c.amount }}</td>
                             <td>{{ c.date.strftime('%Y-%m-%d') }}</td>
                             <td>
-                                <form method="POST" action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=c.member_id) }}"
-                                      onsubmit="return confirm('Are you sure you want to delete this contribution?');">
+                                <form method="POST" action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=c.member_id) }}">
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
                             </td>
@@ -158,8 +156,7 @@
                             <td>{{ loan.repayment_period }} months</td>
                             <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
                             <td>
-                                <form method="POST" action="{{ url_for('delete_loan', loan_id=loan.id) }}"
-                                      onsubmit="return confirm('Are you sure you want to delete this loan?');">
+                                <form method="POST" action="{{ url_for('delete_loan', loan_id=loan.id) }}">
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
                             </td>
@@ -203,3 +200,26 @@ var contributionChart = new Chart(ctx, {
 </script>
 
 {% endblock %}
+```
+eof
+
+---
+
+### What to Check Next
+
+Since the `dashboard.html` template is now correctly formatted for the `POST` requests, the issue is almost certainly in your Flask application (`app.py`). You need to ensure that the routes `delete_member`, `delete_contribution`, and `delete_loan` are all set up to handle both `GET` and `POST` methods.
+
+For example, a typical Flask route for a deletion should look something like this:
+
+```python
+from flask import request
+
+@app.route('/delete_member/<int:member_id>', methods=['POST'])
+def delete_member(member_id):
+    # Your deletion logic here
+    # For example, using your database model:
+    # member_to_delete = Member.query.get_or_404(member_id)
+    # db.session.delete(member_to_delete)
+    # db.session.commit()
+    # flash('Member successfully deleted!', 'success')
+    return redirect(url_for('manage_member'))
