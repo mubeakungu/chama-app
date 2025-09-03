@@ -5,7 +5,7 @@
 
 <h3>Member Summary</h3>
 
-<form action="{{ url_for('member_summary') }}" method="POST" class="mb-3">
+<form action="{{ url_for('member_summary', member_id=member.id) }}" method="POST" class="mb-3">
     <label for="member_id" class="form-label">Select Member</label>
     <select name="member_id" id="member_id" class="form-select" required>
         <option value="">-- Select a member --</option>
