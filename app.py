@@ -217,20 +217,47 @@ def manage_member():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
+    # Get members
     members = Member.query.all()
 
+    # Get contributions (assuming you have a Contribution model)
+    contributions = db.session.query(
+        Contribution.id,
+        Contribution.amount,
+        Contribution.date,
+        Contribution.type,
+        Member.name.label("member_name")
+    ).join(Member).order_by(Contribution.date.desc()).all()
+
+    # Get loans (assuming Loan model)
+    loans = db.session.query(
+        Loan.id,
+        Loan.principal,
+        Loan.interest_rate,
+        Loan.repayment_period,
+        Loan.issue_date,
+        Member.name.label("name")
+    ).join(Member).order_by(Loan.issue_date.desc()).all()
+
+    # Totals
     total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
     total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
     total_withdrawals = db.session.query(func.sum(Withdrawal.amount)).scalar() or 0
 
-    # 🔹 Add these so template doesn’t break
+    # 🔹 Build chart data
     chart_labels = [m.name for m in members]
-    chart_data = [sum(c.amount for c in m.contributions) for m in members]
+    chart_data = []
+    for m in members:
+        total = db.session.query(func.sum(Contribution.amount)) \
+            .filter(Contribution.member_id == m.id).scalar() or 0
+        chart_data.append(total)
 
     return render_template(
         'manage_member.html',
         members=members,
+        contributions=contributions,
+        loans=loans,
         total_contributions=total_contributions,
         total_loans=total_loans,
         total_repayments=total_repayments,
