@@ -43,7 +43,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # 🐞 CORRECTED: This foreign key was incorrectly pointing to `loan.id`.
+    # CORRECTED: This foreign key was incorrectly pointing to `loan.id`.
     # It has been changed to point to `member.id` to link loans to members.
     member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
@@ -151,7 +151,6 @@ def add_member():
         name = request.form['name']
         phone = request.form['phone']
         email = request.form['email']
-        join_date_str = request.form.get('join_date')
         
         # Simple validation
         if not name or not phone:
@@ -159,13 +158,7 @@ def add_member():
             return redirect(url_for('add_member'))
 
         try:
-            # 🐞 UPDATED: Use the date from the form if provided, otherwise use current date.
-            if join_date_str:
-                join_date = datetime.strptime(join_date_str, '%Y-%m-%d')
-                new_member = Member(name=name, phone=phone, email=email, join_date=join_date)
-            else:
-                new_member = Member(name=name, phone=phone, email=email)
-
+            new_member = Member(name=name, phone=phone, email=email)
             db.session.add(new_member)
             db.session.commit()
             flash('Member added successfully!', 'success')
@@ -187,16 +180,9 @@ def add_contribution():
         member_id = request.form['member_id']
         amount = request.form['amount']
         contribution_type = request.form['type']
-        date_str = request.form.get('date')
-
+        
         try:
-            # 🐞 UPDATED: Use the date from the form if provided, otherwise use current date.
-            if date_str:
-                contribution_date = datetime.strptime(date_str, '%Y-%m-%d')
-                new_contribution = Contribution(member_id=member_id, amount=amount, type=contribution_type, date=contribution_date)
-            else:
-                new_contribution = Contribution(member_id=member_id, amount=amount, type=contribution_type)
-
+            new_contribution = Contribution(member_id=member_id, amount=amount, type=contribution_type)
             db.session.add(new_contribution)
             db.session.commit()
             flash('Contribution added successfully!', 'success')
@@ -221,29 +207,15 @@ def add_loan():
         interest_rate = request.form['interest_rate']
         repayment_period = request.form['repayment_period']
         loan_type = request.form['loan_type']
-        issue_date_str = request.form.get('issue_date')
-
+        
         try:
-            # 🐞 UPDATED: Use the date from the form if provided, otherwise use current date.
-            if issue_date_str:
-                issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d')
-                new_loan = Loan(
-                    member_id=member_id,
-                    principal=principal,
-                    interest_rate=interest_rate,
-                    repayment_period=repayment_period,
-                    loan_type=loan_type,
-                    issue_date=issue_date
-                )
-            else:
-                new_loan = Loan(
-                    member_id=member_id,
-                    principal=principal,
-                    interest_rate=interest_rate,
-                    repayment_period=repayment_period,
-                    loan_type=loan_type
-                )
-
+            new_loan = Loan(
+                member_id=member_id,
+                principal=principal,
+                interest_rate=interest_rate,
+                repayment_period=repayment_period,
+                loan_type=loan_type
+            )
             db.session.add(new_loan)
             db.session.commit()
             flash('Loan added successfully!', 'success')
@@ -400,16 +372,9 @@ def repay_loan():
     if request.method == 'POST':
         loan_id = request.form['loan_id']
         amount_paid = request.form['amount_paid']
-        payment_date_str = request.form.get('payment_date')
         
         try:
-            # 🐞 UPDATED: Use the date from the form if provided, otherwise use current date.
-            if payment_date_str:
-                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
-                new_repayment = LoanRepayment(loan_id=loan_id, amount_paid=amount_paid, payment_date=payment_date)
-            else:
-                new_repayment = LoanRepayment(loan_id=loan_id, amount_paid=amount_paid)
-
+            new_repayment = LoanRepayment(loan_id=loan_id, amount_paid=amount_paid)
             db.session.add(new_repayment)
             db.session.commit()
             flash('Loan repayment recorded successfully!', 'success')
@@ -431,16 +396,9 @@ def withdraw_loan():
     if request.method == 'POST':
         loan_id = request.form['loan_id']
         amount = request.form['amount']
-        disbursed_date_str = request.form.get('disbursed_date')
 
         try:
-            # 🐞 UPDATED: Use the date from the form if provided, otherwise use current date.
-            if disbursed_date_str:
-                disbursed_date = datetime.strptime(disbursed_date_str, '%Y-%m-%d')
-                new_withdrawal = Withdrawal(loan_id=loan_id, amount=amount, disbursed_date=disbursed_date)
-            else:
-                new_withdrawal = Withdrawal(loan_id=loan_id, amount=amount)
-
+            new_withdrawal = Withdrawal(loan_id=loan_id, amount=amount)
             db.session.add(new_withdrawal)
             db.session.commit()
             flash('Loan withdrawal recorded successfully!', 'success')
@@ -462,16 +420,8 @@ def loan_details(loan_id):
     
     if request.method == 'POST':
         amount_paid = request.form['amount_paid']
-        payment_date_str = request.form.get('payment_date')
-
         try:
-            # 🐞 UPDATED: Use the date from the form if provided, otherwise use current date.
-            if payment_date_str:
-                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
-                new_repayment = LoanRepayment(loan_id=loan.id, amount_paid=amount_paid, payment_date=payment_date)
-            else:
-                new_repayment = LoanRepayment(loan_id=loan.id, amount_paid=amount_paid)
-
+            new_repayment = LoanRepayment(loan_id=loan.id, amount_paid=amount_paid)
             db.session.add(new_repayment)
             db.session.commit()
             flash('Repayment recorded successfully!', 'success')
@@ -541,7 +491,8 @@ def member_summary(member_id):
     for loan in loans:
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
         loan.remaining_balance = loan.principal - total_repaid
-
+        loan.total_repaid = total_repaid # Pass total repaid to the template
+        
     return render_template('member_summary.html',
                            member=member,
                            contributions=contributions,
