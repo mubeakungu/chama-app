@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 import pandas as pd
 from xhtml2pdf import pisa
-import json # Import the json module to properly pass data to the template
+import json
 
 app = Flask(__name__)
 app.secret_key = 'supersecret'
@@ -48,7 +48,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
