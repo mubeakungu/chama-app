@@ -208,13 +208,22 @@ def add_loan():
         repayment_period = request.form['repayment_period']
         loan_type = request.form['loan_type']
         
+        # --- FIX: Capture the selected date from the form ---
+        issue_date_str = request.form['issue_date']
+        try:
+            issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d')
+        except ValueError:
+            flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+            return redirect(url_for('add_loan'))
+
         try:
             new_loan = Loan(
                 member_id=member_id,
                 principal=principal,
                 interest_rate=interest_rate,
                 repayment_period=repayment_period,
-                loan_type=loan_type
+                loan_type=loan_type,
+                issue_date=issue_date
             )
             db.session.add(new_loan)
             db.session.commit()
