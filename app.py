@@ -212,13 +212,28 @@ def add_loan():
     return render_template('add_loan.html', members=members)
 
 
-# New route for managing members
 @app.route('/manage_member')
 def manage_member():
     if not session.get('admin'):
         return redirect(url_for('login'))
+
     members = Member.query.all()
-    return render_template('manage_member.html', members=members)
+
+    # Totals for dashboard-style cards in manage_member.html
+    total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
+    total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
+    total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
+    total_withdrawals = db.session.query(func.sum(Withdrawal.amount)).scalar() or 0
+
+    return render_template(
+        'manage_member.html',
+        members=members,
+        total_contributions=total_contributions,
+        total_loans=total_loans,
+        total_repayments=total_repayments,
+        total_withdrawals=total_withdrawals
+    )
+
 
 
 # New route for editing a member
