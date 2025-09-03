@@ -136,13 +136,10 @@ def dashboard():
     completed_loans = []
     
     for loan in all_loans:
-        # Calculate the total amount repaid for this specific loan
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
         
-        # Calculate the total amount due (principal + interest)
         total_due = loan.principal + (loan.principal * (loan.interest_rate / 100))
         
-        # Create a dictionary with all the info needed for the template
         loan_info = {
             'member_name': loan.member.name,
             'principal': loan.principal,
@@ -151,7 +148,6 @@ def dashboard():
             'interest': loan.principal * (loan.interest_rate / 100)
         }
 
-        # Check if the loan is completed or ongoing
         if total_repaid >= total_due:
             completed_loans.append(loan_info)
         else:
