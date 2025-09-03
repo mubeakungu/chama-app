@@ -43,7 +43,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -110,6 +110,15 @@ def dashboard():
     ).all()
 
     total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
+    total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
+
+    # Calculate total interests
+    total_interests = 0
+    all_loans = Loan.query.all()
+    for loan in all_loans:
+        # Calculate interest on the principal
+        interest_amount = loan.principal * (loan.interest_rate / 100)
+        total_interests += interest_amount
 
     # Chart data: contributions per member
     member_sums = db.session.query(Member.name, func.sum(Contribution.amount)).outerjoin(
@@ -123,16 +132,9 @@ def dashboard():
                            loans=loans,
                            chart_labels=chart_labels,
                            chart_data=chart_data,
-                           total_contributions=total_contributions)
-
-
-    return render_template("dashboard.html",
-                           members=members,
-                           contributions=contributions,
-                           loans=loans,
-                           chart_labels=chart_labels,
-                           chart_data=chart_data,
-                           total_contributions=total_contributions)
+                           total_contributions=total_contributions,
+                           total_loans=total_loans,
+                           total_interests=total_interests)
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
