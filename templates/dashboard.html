@@ -167,10 +167,12 @@
                             <td>Ksh {{ loan['balance'] }}</td>
                             <td>{{ loan['date_applied'] }}</td>
                             <td>
-                                <form method="POST" action="{{ url_for('delete_loan', loan_id=loan['id']) }}"
-                                      onsubmit="return confirm('Are you sure you want to delete this loan?');">
+                                <form method="POST" 
+                                    action="{{ url_for('delete_contribution', contribution_id=c['id'], member_id=c['member_id']) }}"
+                                    onsubmit="return confirm('Are you sure you want to delete this contribution?');">
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
+
                             </td>
                         </tr>
                     {% else %}
