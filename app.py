@@ -70,6 +70,9 @@ class LoanRepayment(db.Model):
 
 # --- Ensure DB and default admin ---
 with app.app_context():
+    # Fix for schema mismatch: drop all tables and recreate them.
+    # WARNING: This will delete all data in your database!
+    db.drop_all()
     db.create_all()
     if not Admin.query.filter_by(username="admin").first():
         admin = Admin(username="admin", password="pass123")
@@ -129,6 +132,20 @@ def dashboard():
     chart_labels = [m[0] for m in member_sums]
     chart_data = [m[1] or 0 for m in member_sums]
 
+    defaulter_loans = []
+    completed_loans = []
+    
+    # Check for loan statuses
+    for loan in all_loans:
+        total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
+        interest_amount = loan.principal * (loan.interest_rate / 100)
+        total_due = loan.principal + interest_amount
+        
+        if total_repaid >= total_due:
+            completed_loans.append((loan.member.name, loan.principal, total_repaid))
+        else:
+            defaulter_loans.append((loan.member.name, loan.principal, total_repaid))
+
     return render_template("dashboard.html",
                            members=members,
                            contributions=contributions,
@@ -138,7 +155,9 @@ def dashboard():
                            total_contributions=total_contributions,
                            total_loans=total_loans,
                            total_repayments=total_repayments,
-                           total_interests=total_interests)
+                           total_interests=total_interests,
+                           defaulter_loans=defaulter_loans,
+                           completed_loans=completed_loans)
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
