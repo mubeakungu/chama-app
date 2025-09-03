@@ -1,3 +1,6 @@
+# This is a self-contained Flask application that demonstrates how to
+# correctly populate the dashboard with loan status information.
+
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, make_response, render_template_string
 from flask_sqlalchemy import SQLAlchemy
@@ -5,6 +8,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 import pandas as pd
 from xhtml2pdf import pisa
+import json # Import the json module to properly pass data to the template
 
 app = Flask(__name__)
 app.secret_key = 'supersecret'
@@ -30,14 +34,12 @@ class Member(db.Model):
     id_number = db.Column(db.String(50))
     join_date = db.Column(db.Date, default=datetime.utcnow)
     status = db.Column(db.String(50), default="pending")
-    # 'contributions' and 'loans' are back-references to their respective models
     contributions = db.relationship("Contribution", backref="member", cascade="all, delete")
     loans = db.relationship("Loan", backref="member", cascade="all, delete")
 
 
 class Contribution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # This foreign key links a contribution to a member
     member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     amount = db.Column(db.Float, nullable=False)
     type = db.Column(db.String(50))
@@ -46,7 +48,6 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # CORRECTED: This foreign key now correctly links a loan to a member
     member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
@@ -73,7 +74,6 @@ class LoanRepayment(db.Model):
 
 # --- Ensure DB and default admin ---
 with app.app_context():
-    # Only run db.create_all() on the first run to create tables.
     db.create_all()
     if not Admin.query.filter_by(username="admin").first():
         admin = Admin(username="admin", password="pass123")
@@ -122,7 +122,6 @@ def dashboard():
     total_interests = 0
     all_loans = Loan.query.all()
     for loan in all_loans:
-        # Calculate interest on the principal
         interest_amount = loan.principal * (loan.interest_rate / 100)
         total_interests += interest_amount
 
@@ -132,32 +131,44 @@ def dashboard():
     chart_labels = [m[0] for m in member_sums]
     chart_data = [m[1] or 0 for m in member_sums]
 
-    defaulter_loans = []
+    # --- UPDATED LOAN STATUS LOGIC ---
+    ongoing_loans = []
     completed_loans = []
     
-    # Check for loan statuses
     for loan in all_loans:
+        # Calculate the total amount repaid for this specific loan
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
-        interest_amount = loan.principal * (loan.interest_rate / 100)
-        total_due = loan.principal + interest_amount
         
+        # Calculate the total amount due (principal + interest)
+        total_due = loan.principal + (loan.principal * (loan.interest_rate / 100))
+        
+        # Create a dictionary with all the info needed for the template
+        loan_info = {
+            'member_name': loan.member.name,
+            'principal': loan.principal,
+            'repaid': total_repaid,
+            'balance': total_due - total_repaid,
+            'interest': loan.principal * (loan.interest_rate / 100)
+        }
+
+        # Check if the loan is completed or ongoing
         if total_repaid >= total_due:
-            completed_loans.append((loan.member.name, loan.principal, total_repaid))
+            completed_loans.append(loan_info)
         else:
-            defaulter_loans.append((loan.member.name, loan.principal, total_repaid))
+            ongoing_loans.append(loan_info)
 
     return render_template("dashboard.html",
-                            members=members,
-                            contributions=contributions,
-                            loans=loans,
-                            chart_labels=chart_labels,
-                            chart_data=chart_data,
-                            total_contributions=total_contributions,
-                            total_loans=total_loans,
-                            total_repayments=total_repayments,
-                            total_interests=total_interests,
-                            defaulter_loans=defaulter_loans,
-                            completed_loans=completed_loans)
+                           members=members,
+                           contributions=contributions,
+                           loans=loans,
+                           chart_labels=json.dumps(chart_labels),
+                           chart_data=json.dumps(chart_data),
+                           total_contributions=total_contributions,
+                           total_loans=total_loans,
+                           total_repayments=total_repayments,
+                           total_interests=total_interests,
+                           ongoing_loans=ongoing_loans,
+                           completed_loans=completed_loans)
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
@@ -170,7 +181,6 @@ def add_member():
         phone = request.form['phone']
         email = request.form['email']
         
-        # Simple validation
         if not name or not phone:
             flash('Name and phone number are required!', 'danger')
             return redirect(url_for('add_member'))
@@ -234,7 +244,6 @@ def add_loan():
             loan_type = request.form['loan_type']
             issue_date_str = request.form.get('issue_date')
 
-            # Convert date string to datetime object, or use current time as fallback
             if issue_date_str:
                 issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d').date()
             else:
@@ -270,10 +279,7 @@ def manage_member():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    # Get members
     members = Member.query.all()
-
-    # Get contributions (assuming you have a Contribution model)
     contributions = db.session.query(
         Contribution.id,
         Contribution.amount,
@@ -282,7 +288,6 @@ def manage_member():
         Member.name.label("member_name")
     ).join(Member).order_by(Contribution.date.desc()).all()
 
-    # Get loans (assuming Loan model)
     loans = db.session.query(
         Loan.id,
         Loan.principal,
@@ -292,13 +297,11 @@ def manage_member():
         Member.name.label("name")
     ).join(Member).order_by(Loan.issue_date.desc()).all()
 
-    # Totals
     total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
     total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
     total_withdrawals = db.session.query(func.sum(Withdrawal.amount)).scalar() or 0
 
-    # 🔹 Build chart data
     chart_labels = [m.name for m in members]
     chart_data = []
     for m in members:
@@ -315,12 +318,11 @@ def manage_member():
         total_loans=total_loans,
         total_repayments=total_repayments,
         total_withdrawals=total_withdrawals,
-        chart_labels=chart_labels,
-        chart_data=chart_data
+        chart_labels=json.dumps(chart_labels),
+        chart_data=json.dumps(chart_data)
     )
 
 
-# New route for editing a member
 @app.route('/edit_member/<int:member_id>', methods=['GET', 'POST'])
 def edit_member(member_id):
     if not session.get('admin'):
@@ -333,11 +335,9 @@ def edit_member(member_id):
         member.phone = request.form['phone']
         member.email = request.form['email']
         
-        # New fields from the form
         id_number_str = request.form.get('id_number')
         join_date_str = request.form.get('join_date')
 
-        # Update member fields if they exist in the form
         if id_number_str:
             member.id_number = id_number_str
         
@@ -360,7 +360,6 @@ def edit_member(member_id):
     return render_template('edit_member.html', member=member)
 
 
-# Route to handle member deletion - Now accepts POST requests
 @app.route('/delete_member/<int:member_id>', methods=['POST'])
 def delete_member(member_id):
     if not session.get('admin'):
@@ -378,7 +377,6 @@ def delete_member(member_id):
     return redirect(url_for('dashboard'))
 
 
-# Route to handle contribution deletion - Now accepts POST requests
 @app.route('/delete_contribution/<int:contribution_id>/<int:member_id>', methods=['POST'])
 def delete_contribution(contribution_id, member_id):
     if not session.get('admin'):
@@ -396,7 +394,6 @@ def delete_contribution(contribution_id, member_id):
     return redirect(url_for('member_summary', member_id=member_id))
 
 
-# Route to handle loan deletion - Now accepts POST requests
 @app.route('/delete_loan/<int:loan_id>', methods=['POST'])
 def delete_loan(loan_id):
     if not session.get('admin'):
@@ -414,7 +411,6 @@ def delete_loan(loan_id):
     return redirect(url_for('dashboard'))
 
 
-# This route now has a form for loan repayment
 @app.route('/repay_loan', methods=['GET', 'POST'])
 def repay_loan():
     if not session.get('admin'):
@@ -438,7 +434,6 @@ def repay_loan():
     return render_template('repay_loan.html', loans=loans)
 
 
-# This route now has a form for loan withdrawal
 @app.route('/withdraw_loan', methods=['GET', 'POST'])
 def withdraw_loan():
     if not session.get('admin'):
@@ -499,7 +494,6 @@ def generate_report():
     loans = Loan.query.join(Member).all()
     repayments = LoanRepayment.query.join(Loan).all()
 
-    # Compile data into a dictionary for the template
     data = {
         'members': members,
         'contributions': contributions,
@@ -508,10 +502,8 @@ def generate_report():
         'generated_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    # Render HTML template for the report
     html_content = render_template('report_template.html', data=data)
 
-    # Convert HTML to PDF
     pdf_file = "chama_report.pdf"
     
     pisa_status = pisa.CreatePDF(
@@ -522,11 +514,9 @@ def generate_report():
         flash('An error occurred generating the PDF report.', 'danger')
         return redirect(url_for('dashboard'))
     
-    # Send the PDF file
     return send_file(pdf_file, as_attachment=True, download_name="chama_report.pdf", mimetype='application/pdf')
 
 
-# Route to show a summary for a specific member
 @app.route('/member_summary/<int:member_id>')
 def member_summary(member_id):
     if not session.get('admin'):
@@ -538,17 +528,16 @@ def member_summary(member_id):
 
     total_contributions = db.session.query(func.sum(Contribution.amount)).filter_by(member_id=member.id).scalar() or 0
     
-    # Calculate loan balances
     for loan in loans:
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
         loan.remaining_balance = loan.principal - total_repaid
         loan.total_repaid = total_repaid
 
     return render_template('member_summary.html',
-                            member=member,
-                            contributions=contributions,
-                            loans=loans,
-                            total_contributions=total_contributions)
+                           member=member,
+                           contributions=contributions,
+                           loans=loans,
+                           total_contributions=total_contributions)
 
 
 @app.route('/logout')
