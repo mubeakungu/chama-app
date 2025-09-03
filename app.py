@@ -44,7 +44,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -70,9 +70,8 @@ class LoanRepayment(db.Model):
 
 # --- Ensure DB and default admin ---
 with app.app_context():
-    # Fix for schema mismatch: drop all tables and recreate them.
-    # WARNING: This will delete all data in your database!
-    db.drop_all()
+    # Only run db.create_all() on the first run to create tables.
+    # Do not run db.drop_all() in a production environment as it deletes all data.
     db.create_all()
     if not Admin.query.filter_by(username="admin").first():
         admin = Admin(username="admin", password="pass123")
