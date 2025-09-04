@@ -48,7 +48,9 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
+    # FIX: The ForeignKey was incorrectly pointing to "loan.id".
+    # It should point to the "member.id" to establish the relationship.
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
