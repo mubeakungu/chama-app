@@ -125,21 +125,31 @@ def dashboard():
         interest_amount = loan.principal * (loan.interest_rate / 100)
         total_interests += interest_amount
 
-    # Chart data: contributions per member
-    member_sums = db.session.query(Member.name, func.sum(Contribution.amount)).outerjoin(
-        Contribution).group_by(Member.id).all()
-    chart_labels = [m[0] for m in member_sums]
-    chart_data = [m[1] or 0 for m in member_sums]
+    # --- Contributions per member ---
+    member_contributions = db.session.query(
+        Member.name,
+        func.sum(Contribution.amount).label("total_contributions")
+    ).outerjoin(Contribution).group_by(Member.id).all()
 
-    # --- UPDATED LOAN STATUS LOGIC ---
+    # --- Loans per member ---
+    member_loans = db.session.query(
+        Member.name,
+        func.sum(Loan.principal).label("total_loans")
+    ).outerjoin(Loan).group_by(Member.id).all()
+
+    # Prepare chart data
+    chart_labels = [m[0] for m in member_contributions]
+    contributions_data = [m[1] or 0 for m in member_contributions]
+    loans_data = [dict(member_loans).get(m[0], 0) for m in member_contributions]
+
+    # --- Loan status logic ---
     ongoing_loans = []
     completed_loans = []
-    
+
     for loan in all_loans:
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
-        
         total_due = loan.principal + (loan.principal * (loan.interest_rate / 100))
-        
+
         loan_info = {
             'member_name': loan.member.name,
             'principal': loan.principal,
@@ -158,13 +168,15 @@ def dashboard():
                            contributions=contributions,
                            loans=loans,
                            chart_labels=json.dumps(chart_labels),
-                           chart_data=json.dumps(chart_data),
+                           contributions_data=json.dumps(contributions_data),
+                           loans_data=json.dumps(loans_data),
                            total_contributions=total_contributions,
                            total_loans=total_loans,
                            total_repayments=total_repayments,
                            total_interests=total_interests,
                            ongoing_loans=ongoing_loans,
                            completed_loans=completed_loans)
+
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
