@@ -317,19 +317,18 @@ def manage_member():
             .filter(Contribution.member_id == m.id).scalar() or 0
         chart_data.append(total)
 
- return render_template(
-    'manage_member.html',
-    members=members,
-    contributions=contributions,
-    loans=loans,
-    total_contributions=total_contributions,
-    total_loans=total_loans,
-    total_repayments=total_repayments,
-    total_withdrawals=total_withdrawals,
-    chart_labels=chart_labels,
-    chart_data=chart_data
-)
-
+    return render_template(
+        'manage_member.html',
+        members=members,
+        contributions=contributions,
+        loans=loans,
+        total_contributions=total_contributions,
+        total_loans=total_loans,
+        total_repayments=total_repayments,
+        total_withdrawals=total_withdrawals,
+        chart_labels=chart_labels,
+        chart_data=chart_data
+    )
 
 
 @app.route('/edit_member/<int:member_id>', methods=['GET', 'POST'])
