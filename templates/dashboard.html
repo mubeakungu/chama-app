@@ -1,56 +1,277 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Dashboard Content -->
+<div class="row mt-4">
+    <!-- Summary Cards -->
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-center">
+            <div class="card-header bg-success text-white fw-bold">Total Contributions</div>
+            <div class="card-body fs-5">Ksh {{ total_contributions | round(2) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-center">
+            <div class="card-header bg-warning text-dark fw-bold">Total Loans Applied</div>
+            <div class="card-body fs-5">Ksh {{ total_loans | round(2) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-center">
+            <div class="card-header bg-info text-white fw-bold">Total Interests</div>
+            <div class="card-body fs-5">Ksh {{ total_interests | round(2) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-center">
+            <div class="card-header bg-danger text-white fw-bold">Loan Balance</div>
+            <div class="card-body fs-5">
+                Ksh {{ (total_loans - (total_repayments if total_repayments else 0)) | round(2) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter by Member -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white fw-bold">Filter by Member</div>
+    <div class="card-body">
+        <select class="form-select" onchange="location = this.value;">
+            <option selected disabled>-- Select Member --</option>
+            {% for member in members %}
+            <option value="{{ url_for('member_summary', member_id=member.id) }}"
+                {% if selected_member == member.id %}selected{% endif %}>
+                {{ member.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Manage Members -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
+        Manage Members
+        <a href="{{ url_for('add_member') }}" class="btn btn-light btn-sm">Add Member</a>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td>{{ member.id }}</td>
+                    <td>{{ member.name }}</td>
+                    <td>{{ member.phone }}</td>
+                    <td><span class="badge bg-secondary">{{ member.status }}</span></td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_member', member_id=member.id) }}">
+                            <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted">No members yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Contributions -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+        Contributions Summary
+        <a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm">Add Contribution</a>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Member</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in contributions %}
+                <tr>
+                    <td>{{ c.member_name }}</td>
+                    <td>{{ c.type }}</td>
+                    <td>Ksh {{ c.amount }}</td>
+                    <td>{{ c.date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=c.member_id) }}">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted">No contributions yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Loans -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-warning fw-bold d-flex justify-content-between align-items-center">
+        Loan Summary
+        <a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm">Add Loan</a>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Member</th>
+                    <th>Principal</th>
+                    <th>Interest Rate</th>
+                    <th>Repayment Period</th>
+                    <th>Date Applied</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in loans %}
+                <tr>
+                    <td>{{ loan.name }}</td>
+                    <td>Ksh {{ loan.principal | round(2) }}</td>
+                    <td>{{ loan.interest_rate | round(2) }}%</td>
+                    <td>{{ loan.repayment_period }} months</td>
+                    <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_loan', loan_id=loan.id) }}">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted">No loans yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Loan Status -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-warning text-white fw-bold">Ongoing Loans</div>
+            <div class="card-body table-responsive">
+                <table class="table table-striped table-bordered align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Member</th>
+                            <th>Loan Amount</th>
+                            <th>Repaid</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in ongoing_loans %}
+                        <tr>
+                            <td>{{ loan.member_name }}</td>
+                            <td>Ksh {{ loan.principal | round(2) }}</td>
+                            <td>Ksh {{ loan.repaid | round(2) }}</td>
+                            <td>Ksh {{ (loan.principal + loan.interest - loan.repaid) | round(2) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No ongoing loans</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-success text-white fw-bold">Completed Loans</div>
+            <div class="card-body table-responsive">
+                <table class="table table-striped table-bordered align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Member</th>
+                            <th>Loan Amount</th>
+                            <th>Total Repaid</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in completed_loans %}
+                        <tr>
+                            <td>{{ loan.member_name }}</td>
+                            <td>Ksh {{ loan.principal | round(2) }}</td>
+                            <td>Ksh {{ loan.repaid | round(2) }}</td>
+                            <td><span class="badge bg-success">Completed</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No completed loans</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Chart -->
 <div class="card shadow mb-4">
-    <div class="card-header bg-info text-white fw-bold">Contributions vs Loans</div>
-    <div class="card-body text-center d-flex justify-content-center">
-        <canvas id="contributionLoanChart" style="max-width: 700px; max-height: 500px;"></canvas>
+    <div class="card-header bg-info text-white fw-bold">Contribution Distribution</div>
+    <div class="card-body d-flex justify-content-center">
+        <canvas id="contributionChart" style="max-width: 450px; max-height: 450px;"></canvas>
     </div>
 </div>
 
 <!-- Chart.js Script -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const chartLabels = {{ chart_labels|tojson }};
-    const contributionsData = {{ contributions_data|tojson }};
-    const loansData = {{ loans_data|tojson }};
+    function generateColors(num) {
+        const colors = [];
+        const baseColors = ['#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336', '#00BCD4', '#FFEB3B', '#8BC34A', '#CDDC39', '#607D8B'];
+        for (let i = 0; i < num; i++) {
+            colors.push(baseColors[i % baseColors.length]);
+        }
+        return colors;
+    }
 
-    if (chartLabels.length > 0) {
-        const ctx = document.getElementById('contributionLoanChart').getContext('2d');
+    const chartLabels = {{ chart_labels|tojson }};
+    const chartData = {{ chart_data|tojson }};
+
+    if (chartLabels.length > 0 && chartData.length > 0) {
+        const ctx = document.getElementById('contributionChart').getContext('2d');
         new Chart(ctx, {
-            type: 'bar',
+            type: 'pie',
             data: {
                 labels: chartLabels,
-                datasets: [
-                    {
-                        label: 'Contributions',
-                        data: contributionsData,
-                        backgroundColor: '#4CAF50'
-                    },
-                    {
-                        label: 'Loans',
-                        data: loansData,
-                        backgroundColor: '#FF9800'
-                    }
-                ]
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: generateColors(chartLabels.length),
+                    hoverOffset: 4
+                }]
             },
             options: {
                 responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return 'Ksh ' + value.toLocaleString('en-KE');
-                            }
-                        }
-                    }
-                },
                 plugins: {
-                    legend: { position: 'top' },
+                    legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const value = context.parsed.y;
-                                return context.dataset.label + ': Ksh ' + value.toLocaleString('en-KE', { minimumFractionDigits: 2 });
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                return `${label}: Ksh ${value.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
                             }
                         }
                     }
@@ -59,3 +280,4 @@
         });
     }
 </script>
+{% endblock %}
