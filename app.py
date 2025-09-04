@@ -102,28 +102,32 @@ def dashboard():
     if not session.get('admin'):
         return redirect(url_for('login'))
 
+    # --- Members ---
     members = Member.query.all()
+
+    # --- Contributions ---
     contributions = Contribution.query.join(Member).add_columns(
         Contribution.id, Contribution.member_id,
         Member.name.label("member_name"), Contribution.type,
         Contribution.amount, Contribution.date
     ).order_by(Contribution.date.desc()).all()
 
+    # --- Loans ---
     loans = Loan.query.join(Member).add_columns(
         Loan.id, Member.name.label("name"), Loan.principal,
         Loan.interest_rate, Loan.repayment_period, Loan.issue_date
-    ).all()
+    ).order_by(Loan.issue_date.desc()).all()
 
+    # --- Totals ---
     total_contributions = db.session.query(func.sum(Contribution.amount)).scalar() or 0
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
     total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
 
-    # Calculate total interests
+    # Calculate total interests (simple interest assumption)
     total_interests = 0
     all_loans = Loan.query.all()
     for loan in all_loans:
-        interest_amount = loan.principal * (loan.interest_rate / 100)
-        total_interests += interest_amount
+        total_interests += loan.principal * (loan.interest_rate / 100)
 
     # --- Contributions per member ---
     member_contributions = db.session.query(
@@ -137,15 +141,14 @@ def dashboard():
         func.sum(Loan.principal).label("total_loans")
     ).outerjoin(Loan).group_by(Member.id).all()
 
-    # Prepare chart data
+    # --- Prepare chart data ---
     chart_labels = [m[0] for m in member_contributions]
     contributions_data = [m[1] or 0 for m in member_contributions]
-    loans_data = [dict(member_loans).get(m[0], 0) for m in member_contributions]
+    loans_dict = dict(member_loans)
+    loans_data = [loans_dict.get(m[0], 0) for m in member_contributions]
 
     # --- Loan status logic ---
-    ongoing_loans = []
-    completed_loans = []
-
+    ongoing_loans, completed_loans = [], []
     for loan in all_loans:
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
         total_due = loan.principal + (loan.principal * (loan.interest_rate / 100))
@@ -153,9 +156,9 @@ def dashboard():
         loan_info = {
             'member_name': loan.member.name,
             'principal': loan.principal,
+            'interest': loan.principal * (loan.interest_rate / 100),
             'repaid': total_repaid,
             'balance': total_due - total_repaid,
-            'interest': loan.principal * (loan.interest_rate / 100)
         }
 
         if total_repaid >= total_due:
@@ -163,19 +166,25 @@ def dashboard():
         else:
             ongoing_loans.append(loan_info)
 
-    return render_template("dashboard.html",
-                           members=members,
-                           contributions=contributions,
-                           loans=loans,
-                           chart_labels=json.dumps(chart_labels),
-                           contributions_data=json.dumps(contributions_data),
-                           loans_data=json.dumps(loans_data),
-                           total_contributions=total_contributions,
-                           total_loans=total_loans,
-                           total_repayments=total_repayments,
-                           total_interests=total_interests,
-                           ongoing_loans=ongoing_loans,
-                           completed_loans=completed_loans)
+    # --- Pass context to template ---
+    return render_template(
+        "dashboard.html",
+        members=members,
+        contributions=contributions,
+        loans=loans,
+        # Totals
+        total_contributions=total_contributions,
+        total_loans=total_loans,
+        total_repayments=total_repayments,
+        total_interests=total_interests,
+        # Charts
+        chart_labels=json.dumps(chart_labels),
+        contributions_data=json.dumps(contributions_data),
+        loans_data=json.dumps(loans_data),
+        # Loan status
+        ongoing_loans=ongoing_loans,
+        completed_loans=completed_loans
+    )
 
 
 
