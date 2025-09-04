@@ -48,7 +48,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -142,8 +142,15 @@ def dashboard():
     ).outerjoin(Loan).group_by(Member.id).all()
 
     # --- Prepare chart data ---
-    chart_labels = [m[0] for m in member_contributions]
-    contributions_data = [m[1] or 0 for m in member_contributions]
+    # Ensure chart_labels and contributions_data are lists, even if empty
+    chart_labels = [m[0] for m in member_contributions] if member_contributions else []
+    contributions_data = [float(m[1] or 0) for m in member_contributions] if member_contributions else []
+    
+    # Correcting the missing variable from your original error.
+    # The traceback indicates the template expects a `chart_data` variable.
+    # We will set it to the contributions data, as that is a common use case.
+    chart_data = contributions_data
+    
     loans_dict = dict(member_loans)
     loans_data = [loans_dict.get(m[0], 0) for m in member_contributions]
 
@@ -179,13 +186,13 @@ def dashboard():
         total_interests=total_interests,
         # Charts
         chart_labels=json.dumps(chart_labels),
+        chart_data=json.dumps(chart_data), # Fix applied here
         contributions_data=json.dumps(contributions_data),
         loans_data=json.dumps(loans_data),
         # Loan status
         ongoing_loans=ongoing_loans,
         completed_loans=completed_loans
     )
-
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
@@ -551,10 +558,10 @@ def member_summary(member_id):
         loan.total_repaid = total_repaid
 
     return render_template('member_summary.html',
-                           member=member,
-                           contributions=contributions,
-                           loans=loans,
-                           total_contributions=total_contributions)
+                            member=member,
+                            contributions=contributions,
+                            loans=loans,
+                            total_contributions=total_contributions)
 
 
 @app.route('/logout')
