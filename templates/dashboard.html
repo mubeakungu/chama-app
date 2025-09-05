@@ -1,307 +1,174 @@
-ments else 0)) | round(2) }}
-</div>
-</div>
-</div>
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4"> <h3 class="mb-4">Chama Dashboard</h3>
+
+<!-- Summary Cards -->
+<div class="row g-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-users"></i> Total Members</h5>
+                <p class="fs-2 fw-bold">{{ members|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-money-bill-wave"></i> Total Contributions</h5>
+                <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_contributions) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-dark shadow h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Total Loans Issued</h5>
+                <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_loans) }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark shadow h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-piggy-bank"></i> Total Repayments</h5>
+                <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_repayments) }}</p>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Filter by Member -->
-
-<div class="card shadow my-4">
-<div class="card-header bg-primary text-white fw-bold">Filter by Member</div>
-<div class="card-body">
-<select class="form-select" onchange="location = this.value;">
-<option selected disabled>-- Select Member --</option>
-{% for member in members %}
-<option value="{{ url_for('member_summary', member_id=member.id) }}"
-{% if selected_member == member.id %}selected{% endif %}>
-{{ member.name }}
-</option>
-{% endfor %}
-</select>
-</div>
-</div>
+<hr class="my-5">
 
 <!-- Charts Section -->
-
-<div class="row g-3 my-4">
-<div class="col-md-6">
-<div class="card shadow h-100">
-<div class="card-header bg-info text-white fw-bold">Contribution Distribution</div>
-<div class="card-body d-flex justify-content-center">
-<canvas id="contributionChart" style="max-width: 450px; max-height: 450px;"></canvas>
-</div>
-</div>
-</div>
-<div class="col-md-6">
-<div class="card shadow h-100">
-<div class="card-header bg-warning text-white fw-bold">Loan Distribution</div>
-<div class="card-body d-flex justify-content-center">
-<canvas id="loanChart" style="max-width: 450px; max-height: 450px;"></canvas>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Manage Members -->
-
-<div class="card shadow mb-4">
-<div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
-Manage Members
-<a href="{{ url_for('add_member') }}" class="btn btn-light btn-sm"><i class="fas fa-user-plus"></i> Add Member</a>
-</div>
-<div class="card-body table-responsive">
-<table class="table table-striped table-hover align-middle">
-<thead class="table-dark">
-<tr>
-<th>ID</th>
-<th>Name</th>
-<th>Phone</th>
-<th>Status</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-{% for member in members %}
-<tr>
-<td>{{ member.id }}</td>
-<td><a href="{{ url_for('member_summary', member_id=member.id) }}" class="text-decoration-none text-dark fw-bold">{{ member.name }}</a></td>
-<td>{{ member.phone }}</td>
-<td><span class="badge bg-secondary">{{ member.status }}</span></td>
-<td>
-<a href="{{ url_for('member_summary', member_id=member.id) }}" class="btn btn-sm btn-info text-white"><i class="fas fa-eye"></i> View</a>
-<form method="POST" action="{{ url_for('delete_member', member_id=member.id) }}" class="d-inline-block">
-<button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Remove</button>
-</form>
-</td>
-</tr>
-{% else %}
-<tr><td colspan="5" class="text-center text-muted">No members yet</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow h-100">
+            <div class="card-header bg-dark text-white fw-bold">
+                Contributions vs. Loans per Member
+            </div>
+            <div class="card-body">
+                <canvas id="contributionLoanChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow h-100">
+            <div class="card-header bg-dark text-white fw-bold">
+                Contributions by Member
+            </div>
+            <div class="card-body">
+                <canvas id="memberContributionsChart"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Contributions -->
-
-<div class="card shadow mb-4">
-<div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
-Contributions Summary
-<a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm"><i class="fas fa-plus"></i> Add Contribution</a>
-</div>
-<div class="card-body table-responsive">
-<table class="table table-bordered table-hover align-middle">
-<thead class="table-dark">
-<tr>
-<th>Member</th>
-<th>Type</th>
-<th>Amount</th>
-<th>Date</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-{% for c in contributions %}
-<tr>
-<td>{{ c.member_name }}</td>
-<td>{{ c.type }}</td>
-<td>Ksh {{ c.amount }}</td>
-<td>{{ c.date.strftime('%Y-%m-%d') }}</td>
-<td>
-<form method="POST" action="{{ url_for('delete_contribution', contribution_id=c.id, member_id=c.member_id) }}">
-<button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</button>
-</form>
-</td>
-</tr>
-{% else %}
-<tr><td colspan="5" class="text-center text-muted">No contributions yet</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-</div>
-
-<!-- Loans -->
-
-<div class="card shadow mb-4">
-<div class="card-header bg-warning fw-bold d-flex justify-content-between align-items-center">
-Loan Summary
-<a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm"><i class="fas fa-plus"></i> Add Loan</a>
-</div>
-<div class="card-body table-responsive">
-<table class="table table-striped table-hover align-middle">
-<thead class="table-dark">
-<tr>
-<th>Member</th>
-<th>Principal</th>
-<th>Interest Rate</th>
-<th>Repayment Period</th>
-<th>Date Applied</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-{% for loan in loans %}
-<tr>
-<td>{{ loan.name }}</td>
-<td>Ksh {{ loan.principal | round(2) }}</td>
-<td>{{ loan.interest_rate | round(2) }}%</td>
-<td>{{ loan.repayment_period }} months</td>
-<td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
-<td>
-<a href="{{ url_for('add_repayment', loan_id=loan.id) }}" class="btn btn-sm btn-success"><i class="fas fa-plus"></i> Repay</a>
-<form method="POST" action="{{ url_for('delete_loan', loan_id=loan.id) }}" class="d-inline-block">
-<button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</button>
-</form>
-</td>
-</tr>
-{% else %}
-<tr><td colspan="6" class="text-center text-muted">No loans yet</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
+<!-- Loan Status Section -->
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow h-100">
+            <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+                Ongoing Loans
+            </div>
+            <div class="card-body">
+                {% if ongoing_loans %}
+                    <ul class="list-group list-group-flush">
+                    {% for loan in ongoing_loans %}
+                        <li class="list-group-item">
+                            <strong>{{ loan.member_name }}</strong><br>
+                            Principal: KES {{ "%.2f"|format(loan.principal) }}<br>
+                            Balance: KES {{ "%.2f"|format(loan.balance) }}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted text-center">No ongoing loans.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow h-100">
+            <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+                Completed Loans
+            </div>
+            <div class="card-body">
+                {% if completed_loans %}
+                    <ul class="list-group list-group-flush">
+                    {% for loan in completed_loans %}
+                        <li class="list-group-item">
+                            <strong>{{ loan.member_name }}</strong><br>
+                            Principal: KES {{ "%.2f"|format(loan.principal) }}<br>
+                            Repaid: KES {{ "%.2f"|format(loan.repaid) }}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted text-center">No completed loans.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Loan Status -->
+<hr class="my-5">
 
-<div class="row g-3">
-<div class="col-md-6">
-<div class="card shadow h-100">
-<div class="card-header bg-warning text-white fw-bold">Ongoing Loans</div>
-<div class="card-body table-responsive">
-<table class="table table-striped table-hover align-middle">
-<thead class="table-dark">
-<tr>
-<th>Member</th>
-<th>Loan Amount</th>
-<th>Repaid</th>
-<th>Balance</th>
-</tr>
-</thead>
-<tbody>
-{% for loan in ongoing_loans %}
-<tr>
-<td>{{ loan.member_name }}</td>
-<td>Ksh {{ loan.principal | round(2) }}</td>
-<td>Ksh {{ loan.repaid | round(2) }}</td>
-<td>Ksh {{ (loan.principal + loan.interest - loan.repaid) | round(2) }}</td>
-</tr>
-{% else %}
-<tr><td colspan="4" class="text-center text-muted">No ongoing loans</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="card shadow h-100">
-<div class="card-header bg-success text-white fw-bold">Completed Loans</div>
-<div class="card-body table-responsive">
-<table class="table table-striped table-hover align-middle">
-<thead class="table-dark">
-<tr>
-<th>Member</th>
-<th>Loan Amount</th>
-<th>Total Repaid</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-{% for loan in completed_loans %}
-<tr>
-<td>{{ loan.member_name }}</td>
-<td>Ksh {{ loan.principal | round(2) }}</td>
-<td>Ksh {{ loan.repaid | round(2) }}</td>
-<td><span class="badge bg-success">Completed</span></td>
-</tr>
-{% else %}
-<tr><td colspan="4" class="text-center text-muted">No completed loans</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-</div>
+<!-- Action Buttons -->
+<div class="text-center mb-4">
+    <a href="{{ url_for('add_member') }}" class="btn btn-primary me-2"><i class="fas fa-user-plus"></i> Add Member</a>
+    <a href="{{ url_for('add_contribution') }}" class="btn btn-secondary me-2"><i class="fas fa-hand-holding-usd"></i> Add Contribution</a>
+    <a href="{{ url_for('add_loan') }}" class="btn btn-info text-white me-2"><i class="fas fa-money-check-alt"></i> Add Loan</a>
+    <a href="{{ url_for('repay_loan') }}" class="btn btn-success me-2"><i class="fas fa-coins"></i> Repay Loan</a>
+    <a href="{{ url_for('generate_report') }}" class="btn btn-warning text-dark"><i class="fas fa-file-pdf"></i> Generate Report</a>
 </div>
 
 </div>
 
-<!-- Chart.js Script -->
+<!-- Chart.js and FontAwesome -->
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<script>
-function generateColors(num) {
-const baseColors = [
-'#4CAF50', '#FF9800', '#2196F3', '#9C27B0', '#F44336',
-'#00BCD4', '#FFEB3B', '#8BC34A', '#CDDC39', '#607D8B'
-];
-return Array.from({ length: num }, (_, i) => baseColors[i % baseColors.length]);
-}
+<script> // Contributions vs. Loans Chart var ctx1 = document.getElementById('contributionLoanChart').getContext('2d'); var contributionLoanChart = new Chart(ctx1, { type: 'bar', data: { labels: {{ chart_labels | safe }}, datasets: [{ label: 'Contributions', data: {{ contributions_data | safe }}, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }, { label: 'Loans', data: {{ loans_data | safe }}, backgroundColor: 'rgba(255, 99, 132, 0.7)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1 }] }, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
 
-const chartLabels = {{ chart_labels | tojson }};
-const contributionsData = {{ contributions_data | tojson }};
-const loansData = {{ loans_data | tojson }};
-
-// Contribution Chart
-if (chartLabels.length > 0) {
-const ctx = document.getElementById('contributionChart').getContext('2d');
-new Chart(ctx, {
-type: 'pie',
-data: {
-labels: chartLabels,
-datasets: [{
-data: contributionsData,
-backgroundColor: generateColors(chartLabels.length),
-hoverOffset: 6
-}]
-},
-options: {
-responsive: true,
-plugins: {
-legend: { position: 'bottom' },
-tooltip: {
-callbacks: {
-label: function(context) {
-return ${context.label}: Ksh ${context.parsed.toLocaleString(&#39;en-KE&#39;, { minimumFractionDigits: 2 })};
-}
-}
-}
-}
-}
+// Contributions by Member Pie Chart
+var ctx2 = document.getElementById(&#39;memberContributionsChart&#39;).getContext(&#39;2d&#39;);
+var memberContributionsChart = new Chart(ctx2, {
+    type: &#39;pie&#39;,
+    data: {
+        labels: {{ chart_labels | safe }},
+        datasets: [{
+            label: &#39;Contributions&#39;,
+            data: {{ contributions_data | safe }},
+            backgroundColor: [
+                &#39;rgba(255, 99, 132, 0.7)&#39;,
+                &#39;rgba(54, 162, 235, 0.7)&#39;,
+                &#39;rgba(255, 206, 86, 0.7)&#39;,
+                &#39;rgba(75, 192, 192, 0.7)&#39;,
+                &#39;rgba(153, 102, 255, 0.7)&#39;,
+                &#39;rgba(255, 159, 64, 0.7)&#39;
+            ],
+            borderColor: [
+                &#39;rgba(255, 99, 132, 1)&#39;,
+                &#39;rgba(54, 162, 235, 1)&#39;,
+                &#39;rgba(255, 206, 86, 1)&#39;,
+                &#39;rgba(75, 192, 192, 1)&#39;,
+                &#39;rgba(153, 102, 255, 1)&#39;,
+                &#39;rgba(255, 159, 64, 1)&#39;
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+    }
 });
-}
 
-// Loan Chart
-if (chartLabels.length > 0) {
-const loanCtx = document.getElementById('loanChart').getContext('2d');
-new Chart(loanCtx, {
-type: 'pie',
-data: {
-labels: chartLabels,
-datasets: [{
-data: loansData,
-backgroundColor: generateColors(chartLabels.length),
-hoverOffset: 6
-}]
-},
-options: {
-responsive: true,
-plugins: {
-legend: { position: 'bottom' },
-tooltip: {
-callbacks: {
-label: function(context) {
-return ${context.label}: Ksh ${context.parsed.toLocaleString(&#39;en-KE&#39;, { minimumFractionDigits: 2 })};
-}
-}
-}
-}
-}
-});
-}
+</script>
+
+{% endblock %}
 
 </script>
 
