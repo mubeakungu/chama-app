@@ -553,10 +553,10 @@ def member_summary(member_id):
         loan.total_repaid = total_repaid
 
     return render_template('member_summary.html',
-                            member=member,
-                            contributions=contributions,
-                            loans=loans,
-                            total_contributions=total_contributions)
+                           member=member,
+                           contributions=contributions,
+                           loans=loans,
+                           total_contributions=total_contributions)
 
 
 @app.route('/logout')
@@ -564,6 +564,12 @@ def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 if __name__ == "__main__":
