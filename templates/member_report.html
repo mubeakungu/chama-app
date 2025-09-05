@@ -1,67 +1,119 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="card shadow">
-    <div class="card-header bg-secondary text-white fw-bold">
-        Report for {{ name }}
-    </div>
-    <div class="card-body">
-        <p><strong>Total Contributions:</strong> KES {{ total_contributions }}</p>
+<!DOCTYPE html>
 
-        <!-- Contributions Section -->
-        <div class="card mb-3">
-            <div class="card-header bg-light fw-bold">Contributions</div>
-            <div class="card-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Amount (KES)</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for c in contributions %}
-                        <tr>
-                            <td>{{ c['amount'] }}</td>
-                            <td>{{ c['date'] }}</td>
-                            <td>
-                                <!-- Delete Button for Contributions -->
-                                <form method="POST"
-                                      action="{{ url_for('delete_contribution', contribution_id=c['id'], member_id=member_id) }}"
-                                      onsubmit="return confirm('Are you sure you want to delete this contribution?');">
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="3">No contributions found.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chama Financial Report</title>
+<!-- Bootstrap CSS for a clean, professional look -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {
+font-family: Arial, sans-serif;
+margin: 20px;
+}
+.report-header {
+text-align: center;
+margin-bottom: 40px;
+}
+.report-header h1 {
+font-weight: bold;
+}
+.report-section {
+margin-bottom: 30px;
+}
+table {
+width: 100%;
+margin-top: 10px;
+}
+</style>
+</head>
+<body>
 
-        <!-- Loans Section -->
-        {% for report in reports %}
-        <div class="card mb-3">
-            <div class="card-header bg-light fw-bold">
-                {{ report.loan_type }} Loan (Issued: {{ report.issue_date }})
-            </div>
-            <div class="card-body">
-                <p><strong>Principal:</strong> KES {{ report.principal }}</p>
-                <p><strong>Interest Rate:</strong> {{ report.rate }}</p>
-                <p><strong>Period (months):</strong> {{ report.period }}</p>
-                <p><strong>Disbursed:</strong> KES {{ report.disbursed_amount }} on {{ report.disbursed_date }}</p>
-                <p><strong>Repaid:</strong> KES {{ report.repaid }}</p>
-                <p><strong>Total Repayable:</strong> KES {{ report.total_repayable }}</p>
-                <p><strong>Balance:</strong> KES {{ report.balance }}</p>
-            </div>
-        </div>
-        {% else %}
-        <div class="alert alert-info">No loans found for this member.</div>
-        {% endfor %}
-    </div>
+<div class="report-header">
+<h1>Chama Financial Report</h1>
+<p class="text-muted">Generated on {{ data.generated_date }}</p>
 </div>
-{% endblock %}
 
+<!-- Summary Section -->
 
+<div class="report-section">
+<h3 class="bg-light p-2 rounded">Financial Summary</h3>
+<table class="table table-bordered">
+<tbody>
+<tr>
+<td><strong>Total Contributions</strong></td>
+<td>KES {{ "%.2f"|format(data.total_contributions) }}</td>
+</tr>
+<tr>
+<td><strong>Total Loans Issued</strong></td>
+<td>KES {{ "%.2f"|format(data.total_loans) }}</td>
+</tr>
+<tr>
+<td><strong>Total Repayments</strong></td>
+<td>KES {{ "%.2f"|format(data.total_repayments) }}</td>
+</tr>
+<tr>
+<td><strong>Available Funds</strong></td>
+<td>KES {{ "%.2f"|format(data.available_funds) }}</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- Contributions Section -->
+
+<div class="report-section">
+<h3 class="bg-light p-2 rounded">Contributions by Member</h3>
+<table class="table table-striped table-hover">
+<thead class="table-dark">
+<tr>
+<th>Member Name</th>
+<th>Total Contributions (KES)</th>
+</tr>
+</thead>
+<tbody>
+{% for member in data.members_with_contributions %}
+<tr>
+<td>{{ member.name }}</td>
+<td>{{ "%.2f"|format(member.total_contributions) }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<!-- Loan Section -->
+
+<div class="report-section">
+<h3 class="bg-light p-2 rounded">Loans Overview</h3>
+<table class="table table-striped table-hover">
+<thead class="table-dark">
+<tr>
+<th>Member Name</th>
+<th>Principal (KES)</th>
+<th>Balance (KES)</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+{% for loan in data.all_loans %}
+<tr>
+<td>{{ loan.member_name }}</td>
+<td>{{ "%.2f"|format(loan.principal) }}</td>
+<td>{{ "%.2f"|format(loan.balance) }}</td>
+<td>
+{% if loan.balance == 0 %}
+<span class="badge bg-success">Completed</span>
+{% else %}
+<span class="badge bg-warning text-dark">Ongoing</span>
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+</body>
+</html>
