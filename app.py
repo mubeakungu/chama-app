@@ -48,7 +48,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
+    member_id = db.Column(db.Integer, db.ForeignKey("loan.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -536,23 +536,38 @@ def generate_report():
     return send_file(pdf_file, as_attachment=True, download_name="chama_report.pdf", mimetype='application/pdf')
 
 
-@app.route('/member_summary/<int:member_id>')
-def member_summary(member_id):
+@app.route('/member_summary', methods=['GET', 'POST'])
+@app.route('/member_summary/<int:member_id>', methods=['GET', 'POST'])
+def member_summary(member_id=None):
     if not session.get('admin'):
         return redirect(url_for('login'))
 
-    member = Member.query.get_or_404(member_id)
-    contributions = Contribution.query.filter_by(member_id=member.id).order_by(Contribution.date.desc()).all()
-    loans = Loan.query.filter_by(member_id=member.id).order_by(Loan.issue_date.desc()).all()
+    members = Member.query.all()
+    member = None
+    contributions = []
+    loans = []
+    total_contributions = 0
 
-    total_contributions = db.session.query(func.sum(Contribution.amount)).filter_by(member_id=member.id).scalar() or 0
+    if request.method == 'POST':
+        member_id = request.form.get('member_id')
+        if not member_id:
+            flash('Please select a member.', 'danger')
+            return render_template('member_summary.html', members=members)
+        return redirect(url_for('member_summary', member_id=member_id))
     
-    for loan in loans:
-        total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
-        loan.remaining_balance = loan.principal - total_repaid
-        loan.total_repaid = total_repaid
+    if member_id:
+        member = Member.query.get_or_404(member_id)
+        contributions = Contribution.query.filter_by(member_id=member.id).order_by(Contribution.date.desc()).all()
+        loans = Loan.query.filter_by(member_id=member.id).order_by(Loan.issue_date.desc()).all()
+        total_contributions = db.session.query(func.sum(Contribution.amount)).filter_by(member_id=member.id).scalar() or 0
+        
+        for loan in loans:
+            total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
+            loan.remaining_balance = (loan.principal + (loan.principal * (loan.interest_rate / 100))) - total_repaid
+            loan.total_repaid = total_repaid
 
     return render_template('member_summary.html',
+                           members=members,
                            member=member,
                            contributions=contributions,
                            loans=loans,
@@ -564,12 +579,6 @@ def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=True)
-
 
 
 if __name__ == "__main__":
