@@ -2,170 +2,223 @@
 
 {% block content %}
 
-<div class="container mt-4"> <h3 class="mb-4">Chama Dashboard</h3>
+<div class="container mt-4">
+    <h3 class="mb-4">Chama Dashboard</h3>
 
-<!-- Summary Cards -->
-<div class="row g-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white shadow h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-users"></i> Total Members</h5>
-                <p class="fs-2 fw-bold">{{ members|length }}</p>
-            </div>
+    <!-- Member Summary Dropdown -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white fw-bold">
+            Quick Member Summary
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('member_summary') }}">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-8">
+                        <select name="member_id" class="form-select" required>
+                            <option value="">-- Select a Member --</option>
+                            {% for m in members %}
+                                <option value="{{ m.id }}">{{ m.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success w-100">
+                            View Summary
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white shadow h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-money-bill-wave"></i> Total Contributions</h5>
-                <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_contributions) }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-dark shadow h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Total Loans Issued</h5>
-                <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_loans) }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark shadow h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-piggy-bank"></i> Total Repayments</h5>
-                <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_repayments) }}</p>
-            </div>
-        </div>
-    </div>
-</div>
 
-<hr class="my-5">
-
-<!-- Charts Section -->
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card shadow h-100">
-            <div class="card-header bg-dark text-white fw-bold">
-                Contributions vs. Loans per Member
+    <!-- Summary Cards -->
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users"></i> Total Members</h5>
+                    <p class="fs-2 fw-bold">{{ members|length }}</p>
+                </div>
             </div>
-            <div class="card-body">
-                <canvas id="contributionLoanChart"></canvas>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-money-bill-wave"></i> Total Contributions</h5>
+                    <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_contributions) }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-dark shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Total Loans Issued</h5>
+                    <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_loans) }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-piggy-bank"></i> Total Repayments</h5>
+                    <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_repayments) }}</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card shadow h-100">
-            <div class="card-header bg-dark text-white fw-bold">
-                Contributions by Member
+
+    <hr class="my-5">
+
+    <!-- Charts Section -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow h-100">
+                <div class="card-header bg-dark text-white fw-bold">
+                    Contributions vs. Loans per Member
+                </div>
+                <div class="card-body">
+                    <canvas id="contributionLoanChart"></canvas>
+                </div>
             </div>
-            <div class="card-body">
-                <canvas id="memberContributionsChart"></canvas>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow h-100">
+                <div class="card-header bg-dark text-white fw-bold">
+                    Contributions by Member
+                </div>
+                <div class="card-body">
+                    <canvas id="memberContributionsChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Loan Status Section -->
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card shadow h-100">
-            <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
-                Ongoing Loans
+    <!-- Loan Status Section -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card shadow h-100">
+                <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+                    Ongoing Loans
+                </div>
+                <div class="card-body">
+                    {% if ongoing_loans %}
+                        <ul class="list-group list-group-flush">
+                        {% for loan in ongoing_loans %}
+                            <li class="list-group-item">
+                                <strong>{{ loan.member_name }}</strong><br>
+                                Principal: KES {{ "%.2f"|format(loan.principal) }}<br>
+                                Balance: KES {{ "%.2f"|format(loan.balance) }}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted text-center">No ongoing loans.</p>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                {% if ongoing_loans %}
-                    <ul class="list-group list-group-flush">
-                    {% for loan in ongoing_loans %}
-                        <li class="list-group-item">
-                            <strong>{{ loan.member_name }}</strong><br>
-                            Principal: KES {{ "%.2f"|format(loan.principal) }}<br>
-                            Balance: KES {{ "%.2f"|format(loan.balance) }}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="text-muted text-center">No ongoing loans.</p>
-                {% endif %}
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+                    Completed Loans
+                </div>
+                <div class="card-body">
+                    {% if completed_loans %}
+                        <ul class="list-group list-group-flush">
+                        {% for loan in completed_loans %}
+                            <li class="list-group-item">
+                                <strong>{{ loan.member_name }}</strong><br>
+                                Principal: KES {{ "%.2f"|format(loan.principal) }}<br>
+                                Repaid: KES {{ "%.2f"|format(loan.repaid) }}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted text-center">No completed loans.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card shadow h-100">
-            <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
-                Completed Loans
-            </div>
-            <div class="card-body">
-                {% if completed_loans %}
-                    <ul class="list-group list-group-flush">
-                    {% for loan in completed_loans %}
-                        <li class="list-group-item">
-                            <strong>{{ loan.member_name }}</strong><br>
-                            Principal: KES {{ "%.2f"|format(loan.principal) }}<br>
-                            Repaid: KES {{ "%.2f"|format(loan.repaid) }}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="text-muted text-center">No completed loans.</p>
-                {% endif %}
-            </div>
-        </div>
+
+    <hr class="my-5">
+
+    <!-- Action Buttons -->
+    <div class="text-center mb-4">
+        <a href="{{ url_for('add_member') }}" class="btn btn-primary me-2"><i class="fas fa-user-plus"></i> Add Member</a>
+        <a href="{{ url_for('add_contribution') }}" class="btn btn-secondary me-2"><i class="fas fa-hand-holding-usd"></i> Add Contribution</a>
+        <a href="{{ url_for('add_loan') }}" class="btn btn-info text-white me-2"><i class="fas fa-money-check-alt"></i> Add Loan</a>
+        <a href="{{ url_for('repay_loan') }}" class="btn btn-success me-2"><i class="fas fa-coins"></i> Repay Loan</a>
+        <a href="{{ url_for('generate_report') }}" class="btn btn-warning text-dark"><i class="fas fa-file-pdf"></i> Generate Report</a>
     </div>
-</div>
-
-<hr class="my-5">
-
-<!-- Action Buttons -->
-<div class="text-center mb-4">
-    <a href="{{ url_for('add_member') }}" class="btn btn-primary me-2"><i class="fas fa-user-plus"></i> Add Member</a>
-    <a href="{{ url_for('add_contribution') }}" class="btn btn-secondary me-2"><i class="fas fa-hand-holding-usd"></i> Add Contribution</a>
-    <a href="{{ url_for('add_loan') }}" class="btn btn-info text-white me-2"><i class="fas fa-money-check-alt"></i> Add Loan</a>
-    <a href="{{ url_for('repay_loan') }}" class="btn btn-success me-2"><i class="fas fa-coins"></i> Repay Loan</a>
-    <a href="{{ url_for('generate_report') }}" class="btn btn-warning text-dark"><i class="fas fa-file-pdf"></i> Generate Report</a>
-</div>
 
 </div>
 
 <!-- Chart.js and FontAwesome -->
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<script> // Contributions vs. Loans Chart var ctx1 = document.getElementById('contributionLoanChart').getContext('2d'); var contributionLoanChart = new Chart(ctx1, { type: 'bar', data: { labels: {{ chart_labels | safe }}, datasets: [{ label: 'Contributions', data: {{ contributions_data | safe }}, backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }, { label: 'Loans', data: {{ loans_data | safe }}, backgroundColor: 'rgba(255, 99, 132, 0.7)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1 }] }, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
+<script>
+// Contributions vs. Loans Chart
+var ctx1 = document.getElementById('contributionLoanChart').getContext('2d');
+var contributionLoanChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_labels | safe }},
+        datasets: [
+            {
+                label: 'Contributions',
+                data: {{ contributions_data | safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Loans',
+                data: {{ loans_data | safe }},
+                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
 
 // Contributions by Member Pie Chart
-var ctx2 = document.getElementById(&#39;memberContributionsChart&#39;).getContext(&#39;2d&#39;);
+var ctx2 = document.getElementById('memberContributionsChart').getContext('2d');
 var memberContributionsChart = new Chart(ctx2, {
-    type: &#39;pie&#39;,
+    type: 'pie',
     data: {
         labels: {{ chart_labels | safe }},
         datasets: [{
-            label: &#39;Contributions&#39;,
+            label: 'Contributions',
             data: {{ contributions_data | safe }},
             backgroundColor: [
-                &#39;rgba(255, 99, 132, 0.7)&#39;,
-                &#39;rgba(54, 162, 235, 0.7)&#39;,
-                &#39;rgba(255, 206, 86, 0.7)&#39;,
-                &#39;rgba(75, 192, 192, 0.7)&#39;,
-                &#39;rgba(153, 102, 255, 0.7)&#39;,
-                &#39;rgba(255, 159, 64, 0.7)&#39;
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)'
             ],
             borderColor: [
-                &#39;rgba(255, 99, 132, 1)&#39;,
-                &#39;rgba(54, 162, 235, 1)&#39;,
-                &#39;rgba(255, 206, 86, 1)&#39;,
-                &#39;rgba(75, 192, 192, 1)&#39;,
-                &#39;rgba(153, 102, 255, 1)&#39;,
-                &#39;rgba(255, 159, 64, 1)&#39;
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
             ],
             borderWidth: 1
         }]
     },
-    options: {
-        responsive: true,
-    }
+    options: { responsive: true }
 });
-
 </script>
 
 {% endblock %}
