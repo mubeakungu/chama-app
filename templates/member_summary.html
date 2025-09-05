@@ -2,197 +2,199 @@
 
 {% block content %}
 
-<div class="container mt-4"> <h3 class="mb-4">Member Summary</h3>
+<div class="container mt-4">
+    <h3 class="mb-4">Member Summary</h3>
 
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, message in messages %}
-<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
+    <!-- Messages Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
 
-<!-- Member Details -->
-<div class="card shadow mb-4">
-    <div class="card-header bg-primary text-white fw-bold">Member Details</div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <p><strong>Name:</strong> {{ member.name }}</p>
-                <p><strong>Phone:</strong> {{ member.phone }}</p>
-                <p><strong>Email:</strong> {{ member.email }}</p>
+    <!-- Détails du membre -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white fw-bold">Member Details</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Name:</strong> {{ member.name }}</p>
+                    <p><strong>Phone:</strong> {{ member.phone }}</p>
+                    <p><strong>Email:</strong> {{ member.email }}</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p><strong>Total Contributions:</strong> Ksh {{ total_contributions | round(2) }}</p>
+                    <p><strong>Joined:</strong> {{ member.join_date.strftime('%Y-%m-%d') }}</p>
+                    <a href="{{ url_for('edit_member', member_id=member.id) }}" class="btn btn-warning btn-sm">Edit Details</a>
+                </div>
             </div>
-            <div class="col-md-6 text-md-end">
-                <p><strong>Total Contributions:</strong> Ksh {{ total_contributions | round(2) }}</p>
-                <p><strong>Joined:</strong> {{ member.join_date.strftime('%Y-%m-%d') }}</p>
-                <a href="{{ url_for('edit_member', member_id=member.id) }}" class="btn btn-warning btn-sm">Edit Details</a>
+        </div>
+    </div>
+
+    <!-- Section Partage -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-info text-white fw-bold d-flex justify-content-between align-items-center">
+            Share Summary
+            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#shareModal">
+                <i class="fas fa-share-alt"></i> Share
+            </button>
+        </div>
+        <div class="card-body">
+            <p class="text-muted text-center">Generate and share a summary of this member's financial standing.</p>
+        </div>
+    </div>
+
+    <!-- Contributions -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+            Contributions History
+            <a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm">Add Contribution</a>
+        </div>
+        <div class="card-body">
+            {% if contributions %}
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contributions %}
+                    <tr>
+                        <td>Ksh {{ "%.2f"|format(c.amount) }}</td>
+                        <td>{{ c.type }}</td>
+                        <td>{{ c.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="showDeleteModal('{{ url_for('delete_contribution', contribution_id=c.id, member_id=member.id) }}', 'contribution')">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center">No contributions found for this member.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Prêts -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+            Loans History
+            <a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm">Add Loan</a>
+        </div>
+        <div class="card-body">
+            {% if loans %}
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Principal</th>
+                        <th>Interest Rate (%)</th>
+                        <th>Repayment Period</th>
+                        <th>Issue Date</th>
+                        <th>Remaining Balance</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td>Ksh {{ "%.2f"|format(loan.principal) }}</td>
+                        <td>{{ "%.2f"|format(loan.interest_rate) }}</td>
+                        <td>{{ loan.repayment_period }} months</td>
+                        <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
+                        <td>Ksh {{ "%.2f"|format(loan.remaining_balance) }}</td>
+                        <td>
+                            {% if loan.remaining_balance == 0 %}
+                            <span class="badge bg-success">Completed</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Ongoing</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('loan_details', loan_id=loan.id) }}" class="btn btn-info btn-sm">View</a>
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="showDeleteModal('{{ url_for('delete_loan', loan_id=loan.id) }}', 'loan')">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center">No loans found for this member.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmation -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this <span id="itemType"></span>? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Share Section -->
-<div class="card shadow mb-4">
-    <div class="card-header bg-info text-white fw-bold d-flex justify-content-between align-items-center">
-        Share Summary
-        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#shareModal">
-            <i class="fas fa-share-alt"></i> Share
-        </button>
-    </div>
-    <div class="card-body">
-        <p class="text-muted text-center">Generate and share a summary of this member's financial standing.</p>
-    </div>
-</div>
-
-<!-- Contributions -->
-<div class="card shadow mb-4">
-    <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
-        Contributions History
-        <a href="{{ url_for('add_contribution') }}" class="btn btn-light btn-sm">Add Contribution</a>
-    </div>
-    <div class="card-body">
-        {% if contributions %}
-        <table class="table table-striped table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>Amount</th>
-                    <th>Type</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in contributions %}
-                <tr>
-                    <td>Ksh {{ "%.2f"|format(c.amount) }}</td>
-                    <td>{{ c.type }}</td>
-                    <td>{{ c.date.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm"
-                                onclick="showDeleteModal('{{ url_for('delete_contribution', contribution_id=c.id, member_id=member.id) }}', 'contribution')">
-                            Delete
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted text-center">No contributions found for this member.</p>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Loans -->
-<div class="card shadow mb-4">
-    <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
-        Loans History
-        <a href="{{ url_for('add_loan') }}" class="btn btn-light btn-sm">Add Loan</a>
-    </div>
-    <div class="card-body">
-        {% if loans %}
-        <table class="table table-bordered table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>Principal</th>
-                    <th>Interest Rate (%)</th>
-                    <th>Repayment Period</th>
-                    <th>Issue Date</th>
-                    <th>Remaining Balance</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for loan in loans %}
-                <tr>
-                    <td>Ksh {{ "%.2f"|format(loan.principal) }}</td>
-                    <td>{{ "%.2f"|format(loan.interest_rate) }}</td>
-                    <td>{{ loan.repayment_period }} months</td>
-                    <td>{{ loan.issue_date.strftime('%Y-%m-%d') }}</td>
-                    <td>Ksh {{ "%.2f"|format(loan.remaining_balance) }}</td>
-                    <td>
-                        {% if loan.remaining_balance == 0 %}
-                        <span class="badge bg-success">Completed</span>
-                        {% else %}
-                        <span class="badge bg-warning text-dark">Ongoing</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('loan_details', loan_id=loan.id) }}" class="btn btn-info btn-sm">View</a>
-                        <button type="button" class="btn btn-danger btn-sm"
-                                onclick="showDeleteModal('{{ url_for('delete_loan', loan_id=loan.id) }}', 'loan')">
-                            Delete
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted text-center">No loans found for this member.</p>
-        {% endif %}
-    </div>
-</div>
-
-</div>
-
-<!-- Confirmation Modal -->
-
-<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
-<div class="modal-dialog">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Deletion</h5>
-<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-</div>
-<div class="modal-body">
-Are you sure you want to delete this <span id="itemType"></span>? This action cannot be undone.
-</div>
-<div class="modal-footer">
-<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-<form id="deleteForm" method="POST" style="display:inline;">
-<button type="submit" class="btn btn-danger">Delete</button>
-</form>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Share Modal -->
-
+<!-- Modal Partage -->
 <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-<div class="modal-dialog">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title" id="shareModalLabel">Share Member Summary</h5>
-<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
-<div class="modal-body">
-<p>Select a sharing option for this member's financial summary:</p>
-<div class="d-grid gap-2">
-<a id="whatsappShare" href="#" target="_blank" class="btn btn-success">
-<i class="fab fa-whatsapp"></i> Share on WhatsApp
-</a>
-<a id="emailShare" href="#" target="_blank" class="btn btn-primary">
-<i class="fas fa-envelope"></i> Share via Email
-</a>
-</div>
-<hr>
-<label for="receiptText">Receipt Preview</label>
-<textarea class="form-control" id="receiptText" rows="8" readonly></textarea>
-</div>
-</div>
-</div>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shareModalLabel">Share Member Summary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Select a sharing option for this member's financial summary:</p>
+                <div class="d-grid gap-2">
+                    <a id="whatsappShare" href="#" target="_blank" class="btn btn-success">
+                        <i class="fab fa-whatsapp"></i> Share on WhatsApp
+                    </a>
+                    <a id="emailShare" href="#" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-envelope"></i> Share via Email
+                    </a>
+                </div>
+                <hr>
+                <label for="receiptText">Receipt Preview</label>
+                <textarea class="form-control" id="receiptText" rows="8" readonly></textarea>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- JS -->
-
-<script> const member = { name: "{{ member.name }}", phone: "{{ member.phone }}", email: "{{ member.email }}" };
+<!-- JavaScript -->
+<script>
+const member = {
+    name: "{{ member.name }}",
+    phone: "{{ member.phone }}",
+    email: "{{ member.email }}"
+};
 
 const loans = [
     {% for loan in loans %}
@@ -200,7 +202,7 @@ const loans = [
         principal: {{ loan.principal | tojson }},
         total_repaid: {{ loan.total_repaid | tojson }},
         remaining_balance: {{ loan.remaining_balance | tojson }},
-        issue_date: &quot;{{ loan.issue_date.strftime(&#39;%Y-%m-%d&#39;) }}&quot;
+        issue_date: "{{ loan.issue_date.strftime('%Y-%m-%d') }}"
     },
     {% endfor %}
 ];
@@ -208,17 +210,17 @@ const loans = [
 const totalContributions = {{ total_contributions | tojson }};
 
 function generateReceipt() {
-    let loanDetails = &quot;&quot;;
-    if (loans.length &gt; 0) {
-        loanDetails = &quot;\n-- Loan Details --\n&quot;;
-        loans.forEach(loan =&gt; {
+    let loanDetails = "";
+    if (loans.length > 0) {
+        loanDetails = "\n-- Loan Details --\n";
+        loans.forEach(loan => {
             loanDetails += `\nPrincipal: Ksh ${loan.principal.toFixed(2)}`;
             loanDetails += `\nTotal Repaid: Ksh ${loan.total_repaid.toFixed(2)}`;
             loanDetails += `\nRemaining Balance: Ksh ${loan.remaining_balance.toFixed(2)}`;
             loanDetails += `\nIssue Date: ${loan.issue_date}\n`;
         });
     } else {
-        loanDetails = &quot;\n-- No Loans on record --\n&quot;;
+        loanDetails = "\n-- No Loans on record --\n";
     }
 
     const receiptMessage =
@@ -229,29 +231,28 @@ function generateReceipt() {
         `Total Contributions: Ksh ${totalContributions.toFixed(2)}\n` +
         loanDetails;
 
-    document.getElementById(&quot;receiptText&quot;).value = receiptMessage;
+    document.getElementById("receiptText").value = receiptMessage;
 
-    // Share links
-    document.getElementById(&quot;whatsappShare&quot;).href =
+    // Liens de partage
+    document.getElementById("whatsappShare").href =
         `https://wa.me/${member.phone}?text=${encodeURIComponent(receiptMessage)}`;
-    document.getElementById(&quot;emailShare&quot;).href =
-        `mailto:${member.email}?subject=${encodeURIComponent(&quot;Chama Member Summary&quot;)}&amp;body=${encodeURIComponent(receiptMessage)}`;
+    document.getElementById("emailShare").href =
+        `mailto:${member.email}?subject=${encodeURIComponent("Chama Member Summary")}&body=${encodeURIComponent(receiptMessage)}`;
 }
 
-const shareModal = document.getElementById(&quot;shareModal&quot;);
-shareModal.addEventListener(&quot;show.bs.modal&quot;, generateReceipt);
+const shareModal = document.getElementById("shareModal");
+shareModal.addEventListener("show.bs.modal", generateReceipt);
 
-// JavaScript for the delete confirmation modal
-const deleteConfirmationModal = new bootstrap.Modal(document.getElementById(&#39;deleteConfirmationModal&#39;));
-const deleteForm = document.getElementById(&#39;deleteForm&#39;);
-const itemTypeSpan = document.getElementById(&#39;itemType&#39;);
+// Modal de suppression
+const deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+const deleteForm = document.getElementById('deleteForm');
+const itemTypeSpan = document.getElementById('itemType');
 
 function showDeleteModal(url, itemType) {
     deleteForm.action = url;
     itemTypeSpan.textContent = itemType;
     deleteConfirmationModal.show();
 }
-
 </script>
 
 {% endblock %}
