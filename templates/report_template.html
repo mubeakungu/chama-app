@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chama Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+        h2, h3 { text-align: center; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #333; padding: 6px; text-align: left; font-size: 12px; }
+        th { background: #f0f0f0; }
+        .section { margin-top: 30px; }
+        .footer { text-align: center; font-size: 11px; margin-top: 40px; color: #555; }
+    </style>
+</head>
+<body>
+    <h2>Chama Financial Report</h2>
+    <h3>Generated: {{ data.generated_date }}</h3>
+
+    <!-- Members Section -->
+    <div class="section">
+        <h3>Members</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>ID Number</th>
+                    <th>Join Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in data.members %}
+                <tr>
+                    <td>{{ member.name }}</td>
+                    <td>{{ member.phone }}</td>
+                    <td>{{ member.email }}</td>
+                    <td>{{ member.id_number or '-' }}</td>
+                    <td>{{ member.join_date.strftime("%Y-%m-%d") if member.join_date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Contributions Section -->
+    <div class="section">
+        <h3>Contributions</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in data.contributions %}
+                <tr>
+                    <td>{{ c.member.name }}</td>
+                    <td>{{ c.type }}</td>
+                    <td>{{ "%.2f"|format(c.amount) }}</td>
+                    <td>{{ c.date.strftime("%Y-%m-%d") if c.date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Loans Section -->
+    <div class="section">
+        <h3>Loans</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Loan Type</th>
+                    <th>Principal</th>
+                    <th>Interest Rate (%)</th>
+                    <th>Repayment Period (Months)</th>
+                    <th>Issue Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in data.loans %}
+                <tr>
+                    <td>{{ loan.member.name }}</td>
+                    <td>{{ loan.loan_type }}</td>
+                    <td>{{ "%.2f"|format(loan.principal) }}</td>
+                    <td>{{ "%.2f"|format(loan.interest_rate) }}</td>
+                    <td>{{ loan.repayment_period }}</td>
+                    <td>{{ loan.issue_date.strftime("%Y-%m-%d") if loan.issue_date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Loan Repayments Section -->
+    <div class="section">
+        <h3>Loan Repayments</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Loan ID</th>
+                    <th>Member</th>
+                    <th>Amount Paid</th>
+                    <th>Payment Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.repayments %}
+                <tr>
+                    <td>{{ r.loan.id }}</td>
+                    <td>{{ r.loan.member.name }}</td>
+                    <td>{{ "%.2f"|format(r.amount_paid) }}</td>
+                    <td>{{ r.payment_date.strftime("%Y-%m-%d") if r.payment_date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        © {{ data.generated_date.split(" ")[0] }} - Chama System Report
+    </div>
+</body>
+</html>
