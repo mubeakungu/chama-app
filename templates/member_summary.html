@@ -194,18 +194,8 @@ Are you sure you want to delete this <span id="itemType"></span>? This action ca
 
 <script> const member = { name: "{{ member.name }}", phone: "{{ member.phone }}", email: "{{ member.email }}" };
 
-const loans = [
-    {% for loan in loans %}
-    {
-        principal: {{ loan.principal | round(2) }},
-        total_repaid: {{ loan.total_repaid | round(2) }},
-        remaining_balance: {{ loan.remaining_balance | round(2) }},
-        issue_date: &quot;{{ loan.issue_date.strftime(&#39;%Y-%m-%d&#39;) }}&quot;
-    },
-    {% endfor %}
-];
-
-const totalContributions = {{ total_contributions | round(2) }};
+const loans = {{ loans | tojson | safe }};
+const totalContributions = {{ total_contributions | tojson }};
 
 function generateReceipt() {
     let loanDetails = &quot;&quot;;
