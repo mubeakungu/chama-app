@@ -1,18 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card shadow">
-<div class="card-header bg-secondary text-white fw-bold">Repay Loan</div>
-<div class="card-body">
-<form action="{{ url_for('repay_loan') }}" method="POST">
-<div class="mb-3">
-<label for="loan_id" class="form-label">Select Loan</label>
-<select name="loan_id" id="loan_id" class="form-select" required>
-{% for loan in loans %}
-<option value="{{ loan.id }}">{{ loan.member.name }} - KES {{ loan.principal }}</option>
-{% endfor %}
-</select>
-</div>
+<div class="card shadow"> <div class="card-header bg-secondary text-white fw-bold">Repay Loan</div> <div class="card-body"> <form action="{{ url_for('repay_loan') }}" method="POST"> <div class="mb-3"> <label for="loan_id" class="form-label">Select Loan</label> <select name="loan_id" id="loan_id" class="form-select" required> {% for loan in loans %} <option value="{{ loan.id }}">{{ loan.member.name }} - KES {{ loan.principal }}</option> {% endfor %} </select> </div>
 
         <div class="mb-3">
             <label for="amount_paid" class="form-label">Amount Paid (KES)</label>
@@ -33,5 +22,4 @@
     </form>
 </div>
 
-</div>
-{% endblock %}
+</div> {% endblock %}
