@@ -6,9 +6,12 @@
 
     <!-- Top Action Buttons -->
     <div class="mb-3">
-        <a href="{{ url_for('generate_member_report', member_id=member.id) }}" class="btn btn-primary btn-sm">
-            <i class="fas fa-share-alt"></i> Share Report
-        </a>
+        <button onclick="shareViaWhatsApp()" class="btn btn-success btn-sm me-2">
+            <i class="fab fa-whatsapp"></i> Share via WhatsApp
+        </button>
+        <button onclick="shareViaEmail()" class="btn btn-primary btn-sm">
+            <i class="fas fa-envelope"></i> Share via Email
+        </button>
     </div>
 
     <!-- Contributions Section -->
@@ -100,4 +103,48 @@
         </div>
     </div>
 </div>
+
+<script>
+    function shareViaWhatsApp() {
+        const memberName = "{{ member.name }}";
+        const totalContributions = "{{ '%.2f'|format(total_contributions) }}";
+        let totalLoanPrincipal = 0;
+        let totalLoanRemaining = 0;
+        
+        {% for loan in loans %}
+            totalLoanPrincipal += {{ loan.principal }};
+            totalLoanRemaining += {{ "%.2f"|format(loan.remaining_balance) }};
+        {% endfor %}
+
+        const message = `*Member Summary for ${memberName}*:\n\n` +
+                        `*Total Contributions:* Ksh ${totalContributions}\n` +
+                        `*Total Loans Taken:* Ksh ${totalLoanPrincipal.toFixed(2)}\n` +
+                        `*Total Remaining Loan Balance:* Ksh ${totalLoanRemaining.toFixed(2)}`;
+                        
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    }
+
+    function shareViaEmail() {
+        const memberName = "{{ member.name }}";
+        const totalContributions = "{{ '%.2f'|format(total_contributions) }}";
+        let totalLoanPrincipal = 0;
+        let totalLoanRemaining = 0;
+        
+        {% for loan in loans %}
+            totalLoanPrincipal += {{ loan.principal }};
+            totalLoanRemaining += {{ "%.2f"|format(loan.remaining_balance) }};
+        {% endfor %}
+
+        const subject = `Member Summary Report for ${memberName}`;
+        const body = `Hello,\n\nHere is a summary of the records for ${memberName}:\n\n` +
+                     `- Total Contributions: Ksh ${totalContributions}\n` +
+                     `- Total Loans Taken: Ksh ${totalLoanPrincipal.toFixed(2)}\n` +
+                     `- Total Remaining Loan Balance: Ksh ${totalLoanRemaining.toFixed(2)}\n\n` +
+                     `Regards.`;
+                        
+        const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(emailUrl, '_blank');
+    }
+</script>
 {% endblock %}
