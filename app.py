@@ -1,14 +1,12 @@
-# This is a self-contained Flask application that demonstrates how to
-# correctly populate the dashboard with loan status information.
-
+# app.py - updated
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, make_response, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
 from datetime import datetime
-import pandas as pd
-from xhtml2pdf import pisa
 import json
+from xhtml2pdf import pisa
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = 'supersecret'
@@ -48,7 +46,7 @@ class Contribution(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))  # FIXED
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id", ondelete="CASCADE"))
     loan_type = db.Column(db.String(50))
     principal = db.Column(db.Float, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
@@ -57,7 +55,6 @@ class Loan(db.Model):
 
     repayments = db.relationship("LoanRepayment", backref="loan", cascade="all, delete")
     withdrawals = db.relationship("Withdrawal", backref="loan", cascade="all, delete")
-
 
 
 class Withdrawal(db.Model):
@@ -81,6 +78,16 @@ with app.app_context():
         admin = Admin(username="admin", password="pass123")
         db.session.add(admin)
         db.session.commit()
+
+
+# --- Simple request logger for debugging ---
+@app.before_request
+def log_request_info():
+    # prints to your server logs (useful when testing on render/Heroku)
+    try:
+        print(f"REQUEST: {request.method} {request.path}")
+    except Exception:
+        pass
 
 
 # --- ROUTES ---
@@ -147,7 +154,7 @@ def dashboard():
     chart_labels = [m[0] for m in member_contributions] if member_contributions else []
     contributions_data = [float(m[1] or 0) for m in member_contributions] if member_contributions else []
     chart_data = contributions_data
-    
+
     loans_dict = dict(member_loans)
     loans_data = [loans_dict.get(m[0], 0) for m in member_contributions]
 
@@ -201,7 +208,7 @@ def add_member():
         name = request.form['name']
         phone = request.form['phone']
         email = request.form['email']
-        
+
         if not name or not phone:
             flash('Name and phone number are required!', 'danger')
             return redirect(url_for('add_member'))
@@ -224,16 +231,20 @@ def add_member():
 def add_contribution():
     if not session.get('admin'):
         return redirect(url_for('login'))
-    
+
     if request.method == 'POST':
         member_id = request.form['member_id']
         amount = request.form['amount']
         contribution_type = request.form['type']
-        date_str = request.form['date']
-        
+        date_str = request.form.get('date', '')
+
         try:
-            date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            new_contribution = Contribution(member_id=member_id, amount=amount, type=contribution_type, date=date)
+            # Accept either '' or 'YYYY-MM-DD'
+            if date_str:
+                date = datetime.strptime(date_str, '%Y-%m-%d')
+            else:
+                date = datetime.utcnow()
+            new_contribution = Contribution(member_id=int(member_id), amount=float(amount), type=contribution_type, date=date)
             db.session.add(new_contribution)
             db.session.commit()
             flash('Contribution added successfully!', 'success')
@@ -246,7 +257,7 @@ def add_contribution():
             db.session.rollback()
             flash(f'An unexpected error occurred: {e}', 'danger')
             return redirect(url_for('add_contribution'))
-    
+
     members = Member.query.all()
     return render_template('add_contribution.html', members=members)
 
@@ -255,23 +266,23 @@ def add_contribution():
 def add_loan():
     if not session.get('admin'):
         return redirect(url_for('login'))
-        
+
     if request.method == 'POST':
         try:
             member_id = request.form['member_id']
-            principal = request.form['principal']
-            interest_rate = request.form['interest_rate']
-            repayment_period = request.form['repayment_period']
-            loan_type = request.form['loan_type']
-            issue_date_str = request.form.get('issue_date')
+            principal = float(request.form['principal'])
+            interest_rate = float(request.form['interest_rate'])
+            repayment_period = int(request.form['repayment_period'])
+            loan_type = request.form.get('loan_type', '')
+            issue_date_str = request.form.get('issue_date', '')
 
             if issue_date_str:
-                issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d').date()
+                issue_date = datetime.strptime(issue_date_str, '%Y-%m-%d')
             else:
-                issue_date = datetime.utcnow().date()
-                
+                issue_date = datetime.utcnow()
+
             new_loan = Loan(
-                member_id=member_id,
+                member_id=int(member_id),
                 principal=principal,
                 interest_rate=interest_rate,
                 repayment_period=repayment_period,
@@ -348,27 +359,27 @@ def manage_member():
 def edit_member(member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
-    
+
     member = Member.query.get_or_404(member_id)
-    
+
     if request.method == 'POST':
         member.name = request.form['name']
         member.phone = request.form['phone']
         member.email = request.form['email']
-        
+
         id_number_str = request.form.get('id_number')
         join_date_str = request.form.get('join_date')
 
         if id_number_str:
             member.id_number = id_number_str
-        
+
         if join_date_str:
             try:
                 member.join_date = datetime.strptime(join_date_str, '%Y-%m-%d').date()
             except ValueError:
                 flash("Invalid date format. Please use YYYY-MM-DD.", 'danger')
                 return redirect(url_for('edit_member', member_id=member.id))
-        
+
         try:
             db.session.commit()
             flash('Member updated successfully!', 'success')
@@ -377,7 +388,7 @@ def edit_member(member_id):
             db.session.rollback()
             flash(f'An error occurred: {e}', 'danger')
             return redirect(url_for('edit_member', member_id=member.id))
-            
+
     return render_template('edit_member.html', member=member)
 
 
@@ -385,7 +396,7 @@ def edit_member(member_id):
 def delete_member(member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
-        
+
     member_to_delete = Member.query.get_or_404(member_id)
     try:
         db.session.delete(member_to_delete)
@@ -394,7 +405,7 @@ def delete_member(member_id):
     except Exception as e:
         db.session.rollback()
         flash(f'An error occurred: {e}', 'danger')
-        
+
     return redirect(url_for('dashboard'))
 
 
@@ -402,7 +413,7 @@ def delete_member(member_id):
 def delete_contribution(contribution_id, member_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
-        
+
     contribution_to_delete = Contribution.query.get_or_404(contribution_id)
     try:
         db.session.delete(contribution_to_delete)
@@ -411,15 +422,17 @@ def delete_contribution(contribution_id, member_id):
     except Exception as e:
         db.session.rollback()
         flash(f'An error occurred: {e}', 'danger')
-        
+
     return redirect(url_for('member_summary', member_id=member_id))
 
 
+# support deleting loan either from dashboard or from member page (optional member_id)
 @app.route('/delete_loan/<int:loan_id>', methods=['POST'])
-def delete_loan(loan_id):
+@app.route('/delete_loan/<int:loan_id>/<int:member_id>', methods=['POST'])
+def delete_loan(loan_id, member_id=None):
     if not session.get('admin'):
         return redirect(url_for('login'))
-        
+
     loan_to_delete = Loan.query.get_or_404(loan_id)
     try:
         db.session.delete(loan_to_delete)
@@ -428,7 +441,10 @@ def delete_loan(loan_id):
     except Exception as e:
         db.session.rollback()
         flash(f'An error occurred: {e}', 'danger')
-        
+
+    # if the delete came from a member page, redirect back to that member summary
+    if member_id:
+        return redirect(url_for('member_summary', member_id=member_id))
     return redirect(url_for('dashboard'))
 
 
@@ -440,7 +456,7 @@ def repay_loan():
     if request.method == 'POST':
         loan_id = request.form['loan_id']
         amount_paid = request.form['amount_paid']
-        
+
         try:
             new_repayment = LoanRepayment(loan_id=loan_id, amount_paid=amount_paid)
             db.session.add(new_repayment)
@@ -450,7 +466,7 @@ def repay_loan():
             db.session.rollback()
             flash(f'An error occurred: {e}', 'danger')
         return redirect(url_for('repay_loan'))
-    
+
     loans = Loan.query.all()
     return render_template('repay_loan.html', loans=loans)
 
@@ -473,7 +489,7 @@ def withdraw_loan():
             db.session.rollback()
             flash(f'An error occurred: {e}', 'danger')
         return redirect(url_for('withdraw_loan'))
-    
+
     loans = Loan.query.all()
     return render_template('withdraw_loan.html', loans=loans)
 
@@ -482,9 +498,9 @@ def withdraw_loan():
 def loan_details(loan_id):
     if not session.get('admin'):
         return redirect(url_for('login'))
-        
+
     loan = Loan.query.get_or_404(loan_id)
-    
+
     if request.method == 'POST':
         amount_paid = request.form['amount_paid']
         try:
@@ -501,7 +517,7 @@ def loan_details(loan_id):
     total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
     remaining_balance = loan.principal - total_repaid
     repayments = LoanRepayment.query.filter_by(loan_id=loan.id).order_by(LoanRepayment.payment_date.desc()).all()
-    
+
     return render_template('loan_details.html', loan=loan, total_repaid=total_repaid, remaining_balance=remaining_balance, repayments=repayments)
 
 
@@ -526,16 +542,62 @@ def generate_report():
     html_content = render_template('report_template.html', data=data)
 
     pdf_file = "chama_report.pdf"
-    
+
     pisa_status = pisa.CreatePDF(
         html_content,
         dest=open(pdf_file, "wb"))
-    
+
     if pisa_status.err:
         flash('An error occurred generating the PDF report.', 'danger')
         return redirect(url_for('dashboard'))
-    
+
     return send_file(pdf_file, as_attachment=True, download_name="chama_report.pdf", mimetype='application/pdf')
+
+
+# ---- New: generate member-specific report (used by the Share button) ----
+@app.route('/generate_member_report/<int:member_id>')
+def generate_member_report(member_id):
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+
+    member = Member.query.get_or_404(member_id)
+    contributions = Contribution.query.filter_by(member_id=member.id).order_by(Contribution.date.desc()).all()
+    loans = Loan.query.filter_by(member_id=member.id).order_by(Loan.issue_date.desc()).all()
+    total_contributions = db.session.query(func.sum(Contribution.amount)).filter_by(member_id=member.id).scalar() or 0
+
+    data = {
+        'member': member,
+        'contributions': contributions,
+        'loans': loans,
+        'total_contributions': total_contributions,
+        'generated_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    # Try rendering a dedicated per-member report template if present
+    # Template: templates/member_report_template.html (you can create it similar to report_template.html)
+    try:
+        html_content = render_template('member_report_template.html', data=data)
+    except Exception:
+        # Fallback: render a simple HTML string
+        html_content = render_template_string("""
+            <h1>Member Report for {{ data.member.name }}</h1>
+            <p>Generated: {{ data.generated_date }}</p>
+            <p>Total Contributions: KES {{ data.total_contributions }}</p>
+            <h3>Contributions</h3>
+            <ul>{% for c in data.contributions %}<li>{{ c.date }} - {{ c.amount }}</li>{% endfor %}</ul>
+            <h3>Loans</h3>
+            <ul>{% for l in data.loans %}<li>{{ l.issue_date }} - {{ l.principal }}</li>{% endfor %}</ul>
+        """, data=data)
+
+    # Generate PDF to a BytesIO and send (avoid writing to disk if you prefer)
+    result = BytesIO()
+    pisa_status = pisa.CreatePDF(html_content, dest=result)
+    if pisa_status.err:
+        flash('Could not generate member report PDF.', 'danger')
+        return redirect(url_for('member_summary', member_id=member_id))
+
+    result.seek(0)
+    return send_file(result, as_attachment=True, download_name=f"member_{member_id}_report.pdf", mimetype='application/pdf')
 
 
 @app.route('/member_summary', methods=['GET', 'POST'])
@@ -556,13 +618,13 @@ def member_summary(member_id=None):
             flash('Please select a member.', 'danger')
             return render_template('member_summary.html', members=members)
         return redirect(url_for('member_summary', member_id=member_id))
-    
+
     if member_id:
         member = Member.query.get_or_404(member_id)
         contributions = Contribution.query.filter_by(member_id=member.id).order_by(Contribution.date.desc()).all()
         loans = Loan.query.filter_by(member_id=member.id).order_by(Loan.issue_date.desc()).all()
         total_contributions = db.session.query(func.sum(Contribution.amount)).filter_by(member_id=member.id).scalar() or 0
-        
+
         for loan in loans:
             total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
             loan.remaining_balance = (loan.principal + (loan.principal * (loan.interest_rate / 100))) - total_repaid
