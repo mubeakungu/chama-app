@@ -36,7 +36,7 @@
                 <tbody>
                     {% for member in members %}
                     <tr>
-                        <td>{{ member.id }}</td>
+                        <td>{{ loop.index }}</td>
                         <td>
                             <a href="{{ url_for('member_summary', member_id=member.id) }}" class="text-decoration-none">
                                 {{ member.name }}
