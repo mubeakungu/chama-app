@@ -132,11 +132,11 @@ def dashboard():
     total_loans = db.session.query(func.sum(Loan.principal)).scalar() or 0
     total_repayments = db.session.query(func.sum(LoanRepayment.amount_paid)).scalar() or 0
 
-    # Calculate total interests (simple interest assumption)
-    total_interests = 0
+    # --- Calculate total interest (simple assumption) ---
+    total_interest = 0
     all_loans = Loan.query.all()
     for loan in all_loans:
-        total_interests += loan.principal * (loan.interest_rate / 100)
+        total_interest += loan.principal * (loan.interest_rate / 100)
 
     # --- Contributions per member ---
     member_contributions = db.session.query(
@@ -154,11 +154,10 @@ def dashboard():
     chart_labels = [m[0] for m in member_contributions] if member_contributions else []
     contributions_data = [float(m[1] or 0) for m in member_contributions] if member_contributions else []
     chart_data = contributions_data
-
     loans_dict = dict(member_loans)
     loans_data = [loans_dict.get(m[0], 0) for m in member_contributions]
 
-    # --- Loan status logic ---
+    # --- Loan status ---
     ongoing_loans, completed_loans = [], []
     for loan in all_loans:
         total_repaid = db.session.query(func.sum(LoanRepayment.amount_paid)).filter_by(loan_id=loan.id).scalar() or 0
@@ -187,7 +186,7 @@ def dashboard():
         total_contributions=total_contributions,
         total_loans=total_loans,
         total_repayments=total_repayments,
-        total_interests=total_interests,
+        total_interest=total_interest,   # 👈 fixed naming
         # Charts
         chart_labels=json.dumps(chart_labels),
         chart_data=json.dumps(chart_data),
@@ -197,6 +196,7 @@ def dashboard():
         ongoing_loans=ongoing_loans,
         completed_loans=completed_loans
     )
+
 
 
 @app.route('/add_member', methods=['GET', 'POST'])
