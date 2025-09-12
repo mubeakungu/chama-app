@@ -33,35 +33,43 @@
 
     <!-- Summary Cards -->
     <div class="row g-4">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-primary text-white shadow h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-users"></i> Total Members</h5>
+                    <h5 class="card-title"><i class="fas fa-users"></i> Members</h5>
                     <p class="fs-2 fw-bold">{{ members|length }}</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-success text-white shadow h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-money-bill-wave"></i> Total Contributions</h5>
+                    <h5 class="card-title"><i class="fas fa-money-bill-wave"></i> Contributions</h5>
                     <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_contributions) }}</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-info text-dark shadow h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Total Loans Issued</h5>
+                    <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Loans Issued</h5>
                     <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_loans) }}</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-warning text-dark shadow h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-piggy-bank"></i> Total Repayments</h5>
+                    <h5 class="card-title"><i class="fas fa-piggy-bank"></i> Repayments</h5>
                     <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_repayments) }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white shadow h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-percentage"></i> Interests</h5>
+                    <p class="fs-2 fw-bold">KES {{ "%.2f"|format(total_interest) }}</p>
                 </div>
             </div>
         </div>
@@ -97,7 +105,7 @@
     <div class="row g-4">
         <div class="col-md-6">
             <div class="card shadow h-100">
-                <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+                <div class="card-header bg-danger text-white fw-bold">
                     Ongoing Loans
                 </div>
                 <div class="card-body">
@@ -119,7 +127,7 @@
         </div>
         <div class="col-md-6">
             <div class="card shadow h-100">
-                <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+                <div class="card-header bg-success text-white fw-bold">
                     Completed Loans
                 </div>
                 <div class="card-body">
@@ -145,16 +153,26 @@
 
     <!-- Action Buttons -->
     <div class="text-center mb-4">
-        <a href="{{ url_for('add_member') }}" class="btn btn-primary me-2"><i class="fas fa-user-plus"></i> Add Member</a>
-        <a href="{{ url_for('add_contribution') }}" class="btn btn-secondary me-2"><i class="fas fa-hand-holding-usd"></i> Add Contribution</a>
-        <a href="{{ url_for('add_loan') }}" class="btn btn-info text-white me-2"><i class="fas fa-money-check-alt"></i> Add Loan</a>
-        <a href="{{ url_for('repay_loan') }}" class="btn btn-success me-2"><i class="fas fa-coins"></i> Repay Loan</a>
-        <a href="{{ url_for('generate_report') }}" class="btn btn-warning text-dark"><i class="fas fa-file-pdf"></i> Generate Report</a>
+        <a href="{{ url_for('add_member') }}" class="btn btn-primary me-2">
+            <i class="fas fa-user-plus"></i> Add Member
+        </a>
+        <a href="{{ url_for('add_contribution') }}" class="btn btn-secondary me-2">
+            <i class="fas fa-hand-holding-usd"></i> Add Contribution
+        </a>
+        <a href="{{ url_for('add_loan') }}" class="btn btn-info text-white me-2">
+            <i class="fas fa-money-check-alt"></i> Add Loan
+        </a>
+        <a href="{{ url_for('repay_loan') }}" class="btn btn-success me-2">
+            <i class="fas fa-coins"></i> Repay Loan
+        </a>
+        <a href="{{ url_for('generate_report') }}" class="btn btn-warning text-dark">
+            <i class="fas fa-file-pdf"></i> Generate Report
+        </a>
     </div>
 
 </div>
 
-<!-- Chart.js and FontAwesome -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -183,9 +201,7 @@ var contributionLoanChart = new Chart(ctx1, {
     },
     options: {
         responsive: true,
-        scales: {
-            y: { beginAtZero: true }
-        }
+        scales: { y: { beginAtZero: true } }
     }
 });
 
@@ -222,3 +238,4 @@ var memberContributionsChart = new Chart(ctx2, {
 </script>
 
 {% endblock %}
+
